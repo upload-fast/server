@@ -1,0 +1,22 @@
+{
+	"name": "server",
+	"version": "0.0.1",
+	"description": "File Upload SDK",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [],
+	"author": "Iyimide Adekile",
+	"license": "MIT",
+	"dependencies": {
+		"formidable": "^3.5.1",
+		"h3": "^1.11.1",
+		"listhen": "^1.7.2"
+	},
+	"devDependencies": {
+		"@types/express-fileupload": "^1.5.0",
+		"@types/formidable": "^3.4.5",
+		"drizzle-kit": "^0.20.14"
+	}
+}
