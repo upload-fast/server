@@ -1,7 +1,23 @@
-import { createRouter, defineEventHandler, readFormData, setResponseStatus } from 'h3'
+import {
+	createRouter,
+	defineEventHandler,
+	readBody,
+	readFormData,
+	readRawBody,
+	setResponseStatus,
+} from 'h3'
 import { readFiles } from '../utils/readFiles'
+import 'dotenv/config'
 
 export const UFLRouter = createRouter()
+
+UFLRouter.post(
+	'/api',
+	defineEventHandler(async (event) => {
+		const res: { data?: number } = await readBody(event)
+		return res.data
+	})
+)
 
 UFLRouter.get(
 	'/upload',
