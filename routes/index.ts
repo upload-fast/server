@@ -1,6 +1,7 @@
 import {
 	createError,
 	createRouter,
+	defaultContentType,
 	defineEventHandler,
 	readBody,
 	readFormData,
@@ -87,9 +88,4 @@ UFLRouter.post(
 			}
 		}
 	})
-)
-
-UFLRouter.get(
-	'/hello',
-	defineEventHandler((event) => event.context.key)
 )
