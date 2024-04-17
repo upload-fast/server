@@ -12,12 +12,20 @@ export const app = createApp({
 			})
 		}
 
-		const existingKey = await Key.findOne({ value: apikey })
+		try {
+			const existingKey = await Key.findOne({ value: apikey })
 
-		if (!existingKey) {
+			if (!existingKey) {
+				throw createError({
+					statusCode: 401,
+					statusMessage: 'Invalid API key',
+				})
+			}
+			event.context.key = existingKey
+		} catch (e) {
 			throw createError({
-				statusCode: 401,
-				statusMessage: 'Invalid API key',
+				statusCode: 500,
+				statusMessage: 'Internal Server Error',
 			})
 		}
 	},

@@ -10,5 +10,3 @@ export const S3 = new S3Client({
 		secretAccessKey: SECRET_ACCESS_KEY!,
 	},
 })
-
-export const send = async () => console.log(await S3.send(new ListBucketsCommand('')))

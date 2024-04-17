@@ -8,6 +8,7 @@ const KeySchema = new Schema(
 	{
 		value: { type: String, unique: true, required: true },
 		user_id: mongoose.Types.ObjectId,
+		active: Boolean,
 	},
 	{ timestamps: true }
 )

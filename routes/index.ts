@@ -12,6 +12,7 @@ import 'dotenv/config'
 import type { ObjectId } from 'mongoose'
 import { Key } from '../models/api-keys'
 import { generateRandomString } from '../utils/randomvalue'
+import { UploadToR2 } from '../utils/uploadToR2'
 
 export const UFLRouter = createRouter()
 
@@ -19,6 +20,7 @@ type ApiKeyRequest = {
 	user_id?: ObjectId
 }
 
+// API KEY
 UFLRouter.post(
 	'/api-key',
 	defineEventHandler(async (event) => {
@@ -49,6 +51,7 @@ UFLRouter.post(
 	})
 )
 
+// UPLOAD
 UFLRouter.get(
 	'/upload',
 	defineEventHandler(() => {
@@ -69,7 +72,24 @@ UFLRouter.post(
 
 		if (!data.files) {
 			setResponseStatus(event, 404, 'No files found')
-			return `${event.node.res.statusCode}`
-		} else return data
+			return `${event.node.res.statusCode} No files in this dunya`
+		} else {
+			try {
+				data.files.forEach(async (file) => {
+					await UploadToR2({ file, bucket: 'root' })
+				})
+
+				setResponseStatus(event, 200, 'Files uploaded successfully')
+				return 'Files Uploaded'
+			} catch (e) {
+				setResponseStatus(event, 500, 'Error uploading files')
+				return { payload: e.message, message: 'Error uploading files' }
+			}
+		}
 	})
+)
+
+UFLRouter.get(
+	'/hello',
+	defineEventHandler((event) => event.context.key)
 )
