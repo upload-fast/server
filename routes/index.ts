@@ -76,8 +76,8 @@ UFLRouter.post(
 			return `${event.node.res.statusCode} No files in this dunya`
 		} else {
 			try {
-				data.files.forEach(async (file) => {
-					await UploadToR2({ file, bucket: 'root' })
+				const uploadedFiles = data.files.map(async (file) => {
+					await UploadToR2({ file, bucket: 'root', image: true })
 				})
 
 				setResponseStatus(event, 200, 'Files uploaded successfully')
@@ -87,5 +87,15 @@ UFLRouter.post(
 				return { payload: e.message, message: 'Error uploading files' }
 			}
 		}
+	})
+)
+
+UFLRouter.get(
+	'/',
+	defineEventHandler((event) => {
+		if (event.context.user) {
+			return event.context.user._doc.name
+		}
+		return 'Bye'
 	})
 )

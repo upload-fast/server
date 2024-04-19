@@ -4,7 +4,15 @@ import { PutObjectCommand, PutObjectCommandInput, S3Client } from '@aws-sdk/clie
 import { S3 } from './s3'
 import { readFileSync, statSync } from 'node:fs'
 
-export async function UploadToR2({ file, bucket }: { file: File; bucket: string }) {
+export async function UploadToR2({
+	file,
+	bucket,
+	image,
+}: {
+	file: File
+	bucket: string
+	image: boolean
+}) {
 	const body = readFileSync(file.filepath)
 
 	const params: PutObjectCommandInput = {
@@ -12,6 +20,9 @@ export async function UploadToR2({ file, bucket }: { file: File; bucket: string 
 		Key: file.originalFilename as string | undefined,
 		ContentLength: statSync(file.filepath).size,
 		Body: body,
+		ContentType: file.mimetype!,
+		ContentDisposition: image ? `inline; filename=${file.originalFilename}` : undefined,
+		ACL: 'public-read',
 	}
 
 	const command = new PutObjectCommand(params)
