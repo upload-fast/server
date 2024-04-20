@@ -1,9 +1,8 @@
 import mongoose from 'mongoose'
-import { connectToDb } from '../utils/db'
+import { connectToDb } from '../utils/db.js'
 
 const { Schema } = mongoose
 
-connectToDb()
 const KeySchema = new Schema(
 	{
 		value: { type: String, unique: true, required: true },

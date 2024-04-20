@@ -1,6 +1,6 @@
 import { H3Event, createError, getRequestHeader } from 'h3'
-import { Key } from '../models/api-keys'
-import { User } from '../models/user'
+import { Key } from '../models/api-keys.js'
+import { User } from '../models/user.js'
 
 export default async function Handler(event: H3Event) {
 	const apikey = getRequestHeader(event, 'api-key')

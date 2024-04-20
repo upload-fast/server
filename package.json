@@ -6,7 +6,9 @@
 	"type": "module",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"dev": "npx listhen -w ./index.ts"
+		"dev": "npx listhen -w ./index.ts",
+		"bui": "tsup-node ./index.ts --format esm --env.MONGO_URI mongodb+srv://iyifr:21320108Af@cluster0.avu9kyy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
+		"build": "tsup-node ./index.ts --format esm && copy .env dist\\.env"
 	},
 	"keywords": [],
 	"author": "Iyimide Adekile",
@@ -21,6 +23,16 @@
 	},
 	"devDependencies": {
 		"@aws-sdk/types": "^3.535.0",
-		"@types/formidable": "^3.4.5"
+		"@types/formidable": "^3.4.5",
+		"tsup": "^8.0.2",
+		"typescript": "^5.4.5"
+	},
+	"tsup": {
+		"entry": [
+			"./index.ts"
+		],
+		"splitting": false,
+		"sourcemap": true,
+		"clean": true
 	}
 }

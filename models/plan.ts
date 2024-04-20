@@ -2,7 +2,7 @@ import mongoose, { Types } from 'mongoose'
 
 const { Schema } = mongoose
 
-const planSchema = new Schema({
+export const planSchema = new Schema({
 	active: Boolean,
 	plan_type: {
 		type: String,
@@ -10,5 +10,5 @@ const planSchema = new Schema({
 	},
 	totalStorage: Number,
 	storageCap: Number,
-	paidPlan: { type: Boolean, default: false },
+	paid: { type: Boolean, default: false },
 })

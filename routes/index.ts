@@ -8,12 +8,11 @@ import {
 	readRawBody,
 	setResponseStatus,
 } from 'h3'
-import { readFiles } from '../utils/readFiles'
-import 'dotenv/config'
+import { readFiles } from '../utils/readFiles.js'
 import type { ObjectId } from 'mongoose'
-import { Key } from '../models/api-keys'
-import { generateRandomString } from '../utils/randomvalue'
-import { UploadToR2 } from '../utils/uploadToR2'
+import { Key } from '../models/api-keys.js'
+import { generateRandomString } from '../utils/randomvalue.js'
+import { UploadToR2 } from '../utils/uploadToR2.js'
 
 export const UFLRouter = createRouter()
 
@@ -36,7 +35,7 @@ UFLRouter.post(
 		}
 
 		try {
-			await Key.create({ value: generateRandomString(28), user_id: res.user_id })
+			await Key.create({ value: generateRandomString(20), user_id: res.user_id })
 			setResponseStatus(event, 201, 'Created API key successfully')
 			return {
 				success: true,
@@ -76,13 +75,12 @@ UFLRouter.post(
 			return `${event.node.res.statusCode} No files in this dunya`
 		} else {
 			try {
-				const uploadedFiles = data.files.map(async (file) => {
-					await UploadToR2({ file, bucket: 'root', image: true })
+				data.files.forEach(async (file) => {
+					const res = await UploadToR2({ file, bucket: 'root', image: true, event })
 				})
-
 				setResponseStatus(event, 200, 'Files uploaded successfully')
 				return 'Files Uploaded'
-			} catch (e) {
+			} catch (e: any) {
 				setResponseStatus(event, 500, 'Error uploading files')
 				return { payload: e.message, message: 'Error uploading files' }
 			}

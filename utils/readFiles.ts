@@ -32,7 +32,7 @@ export async function readFiles(
 			files: null,
 			error: {
 				value: true,
-				payload: err,
+				payload: err as Record<any, any>,
 			},
 		}
 	}
