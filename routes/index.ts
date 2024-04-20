@@ -13,6 +13,9 @@ import type { ObjectId } from 'mongoose'
 import { Key } from '../models/api-keys.js'
 import { generateRandomString } from '../utils/randomvalue.js'
 import { UploadToR2 } from '../utils/uploadToR2.js'
+import { calcFileSizeInKB } from '../utils/fileSize.js'
+import { UFile } from '../models/file.js'
+import { vars } from '../consts.js'
 
 export const UFLRouter = createRouter()
 
@@ -72,14 +75,27 @@ UFLRouter.post(
 
 		if (!data.files) {
 			setResponseStatus(event, 404, 'No files found')
-			return `${event.node.res.statusCode} No files in this dunya`
+			return `${event.node.res.statusCode} No files!`
 		} else {
 			try {
-				data.files.forEach(async (file) => {
-					const res = await UploadToR2({ file, bucket: 'root', image: true, event })
+				const res = data.files.forEach(async (file) => {
+					const { mimetype, originalFilename, size } = file
+					const isImage = file.mimetype?.startsWith('image/')!
+					await UploadToR2({ file, bucket: 'root', image: isImage, event })
+
+					const file_size = calcFileSizeInKB(size)
+
+					await UFile.create({
+						file_name: originalFilename,
+						file_size,
+						file_type: mimetype,
+						bucket: 'root',
+						url: vars.R2URL + `/${originalFilename}`,
+					})
 				})
+
 				setResponseStatus(event, 200, 'Files uploaded successfully')
-				return 'Files Uploaded'
+				return 'Files success'
 			} catch (e: any) {
 				setResponseStatus(event, 500, 'Error uploading files')
 				return { payload: e.message, message: 'Error uploading files' }

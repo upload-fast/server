@@ -44,6 +44,8 @@ export async function UploadToR2({
 				message: error.message,
 				stack: error.stack,
 			}
+
+			// CREDENTIAL ERROR DEBUGGING
 			setResponseStatus(event!, 500, 'Credential error')
 			event?.respondWith(Response.json({ data: errorString }))
 		})

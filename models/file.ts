@@ -2,11 +2,14 @@ import mongoose from 'mongoose'
 
 const { Schema } = mongoose
 
-const fileSchema = new Schema({
+export const fileSchema = new Schema({
 	file_name: String,
 	file_type: String,
 	file_size: Number,
-	fast_id: mongoose.Types.ObjectId,
+	plan_id: mongoose.Types.ObjectId,
 	bucket: String,
 	url: String,
 })
+
+const FileModel = () => mongoose.model('files', fileSchema)
+export const UFile = (mongoose.models['files'] || FileModel()) as ReturnType<typeof FileModel>
