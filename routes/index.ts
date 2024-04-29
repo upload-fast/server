@@ -99,18 +99,21 @@ UFLRouter.post(
 
 						const file_size = calcFileSizeInKB(size)
 
+						const userId = event.context.user._doc._id
+
+						const res = await User.findById(userId)
+
 						await UFile.create({
 							file_name: originalFilename,
 							file_size,
 							file_type: mimetype,
 							bucket: 'root',
 							url: encodeURI(vars.R2URL + `/${originalFilename}`),
+							// @ts-ignore
+							plan_id: res?.plan?._id,
 						})
 
-						const userId = event.context.user._doc._id
-
-						const res = await User.findById(userId)
-
+						// Update storage
 						res!.plan!.storageUsed! = res!.plan!.storageUsed! + file_size
 
 						await res?.save()
