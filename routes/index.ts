@@ -16,6 +16,7 @@ import { UploadToR2 } from '../utils/uploadToR2.js'
 import { calcFileSizeInKB } from '../utils/fileSize.js'
 import { UFile } from '../models/file.js'
 import { vars } from '../consts.js'
+import { User } from '../models/user.js'
 
 export const UFLRouter = createRouter()
 
@@ -37,12 +38,24 @@ UFLRouter.post(
 			})
 		}
 
+		const existingUser = await User.findById(res.user_id)
+
+		if (!existingUser) {
+			throw createError({
+				status: 400,
+				message: 'No user found to assign key to',
+				statusMessage: 'We could not find that user',
+			})
+		}
+
 		try {
-			await Key.create({ value: generateRandomString(20), user_id: res.user_id })
+			const key = generateRandomString(20)
+			await Key.create({ value: key, user_id: existingUser._id })
 			setResponseStatus(event, 201, 'Created API key successfully')
 			return {
 				success: true,
 				message: 'Created API key successfully',
+				payload: key,
 			}
 		} catch (e) {
 			throw createError({
@@ -71,31 +84,48 @@ UFLRouter.get(
 UFLRouter.post(
 	'/upload',
 	defineEventHandler(async (event) => {
-		const data = await readFiles(event)
+		const data = await readFiles(event, { multiples: true })
 
 		if (!data.files) {
 			setResponseStatus(event, 404, 'No files found')
-			return `${event.node.res.statusCode} No files!`
+			return `No files to upload!`
 		} else {
 			try {
-				const res = data.files.forEach(async (file) => {
-					const { mimetype, originalFilename, size } = file
-					const isImage = file.mimetype?.startsWith('image/')!
-					await UploadToR2({ file, bucket: 'root', image: isImage, event })
+				const uploadResponse = await Promise.all(
+					data.files.map(async (file) => {
+						const { mimetype, originalFilename, size } = file
+						const isImage = file.mimetype?.startsWith('image/')!
+						await UploadToR2({ file, bucket: 'root', image: isImage })
 
-					const file_size = calcFileSizeInKB(size)
+						const file_size = calcFileSizeInKB(size)
 
-					await UFile.create({
-						file_name: originalFilename,
-						file_size,
-						file_type: mimetype,
-						bucket: 'root',
-						url: vars.R2URL + `/${originalFilename}`,
+						await UFile.create({
+							file_name: originalFilename,
+							file_size,
+							file_type: mimetype,
+							bucket: 'root',
+							url: encodeURI(vars.R2URL + `/${originalFilename}`),
+						})
+
+						const userId = event.context.user._doc._id
+
+						const res = await User.findById(userId)
+
+						res!.plan!.storageUsed! = res!.plan!.storageUsed! + file_size
+
+						await res?.save()
+
+						return {
+							file_name: originalFilename,
+							file_size,
+							file_type: mimetype,
+							bucket: 'root',
+							url: encodeURI(vars.R2URL + `/${originalFilename}`),
+							value: res,
+						}
 					})
-				})
-
-				setResponseStatus(event, 200, 'Files uploaded successfully')
-				return 'Files success'
+				)
+				return uploadResponse
 			} catch (e: any) {
 				setResponseStatus(event, 500, 'Error uploading files')
 				return { payload: e.message, message: 'Error uploading files' }
@@ -108,7 +138,7 @@ UFLRouter.get(
 	'/',
 	defineEventHandler((event) => {
 		if (event.context.user) {
-			return event.context.user._doc.name
+			return event.context.user._doc
 		}
 		return 'Bye'
 	})

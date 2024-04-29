@@ -1,8 +1,17 @@
-import { H3Event, createError, getRequestHeader } from 'h3'
+import { H3Event, appendCorsHeaders, createError, getRequestHeader } from 'h3'
 import { Key } from '../models/api-keys.js'
 import { User } from '../models/user.js'
 
 export default async function Handler(event: H3Event) {
+	// handle cors
+	appendCorsHeaders(event, {
+		origin: '*',
+		allowHeaders: '*',
+		methods: '*',
+	})
+	if (event._path === '/api-key') {
+		return
+	}
 	const apikey = getRequestHeader(event, 'api-key')
 	if (!apikey) {
 		throw createError({

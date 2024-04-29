@@ -4,11 +4,10 @@ import { planSchema } from './Plan.js'
 const { Schema } = mongoose
 
 const userSchema = new Schema({
-	firstName: String,
-	lastName: String,
-	githubUserName: String,
+	name: String,
 	email: String,
 	plan: planSchema,
+	emailVerified: Boolean,
 })
 
 const UserModel = () => mongoose.model('users', userSchema)

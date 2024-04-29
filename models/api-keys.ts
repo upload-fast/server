@@ -1,13 +1,13 @@
-import mongoose from 'mongoose'
+import mongoose, { Types } from 'mongoose'
 import { connectToDb } from '../utils/db.js'
 
 const { Schema } = mongoose
 
-const KeySchema = new Schema(
+export const KeySchema = new Schema(
 	{
 		value: { type: String, unique: true, required: true },
-		user_id: mongoose.Types.ObjectId,
-		active: Boolean,
+		user_id: { type: Types.ObjectId, index: true },
+		active: { type: Boolean, default: false },
 	},
 	{ timestamps: true }
 )

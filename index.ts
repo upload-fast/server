@@ -20,7 +20,6 @@ app.use(UFLRouter)
 async function startServer() {
 	try {
 		await connectToDb()
-		console.log('Connected to the database')
 	} catch (err) {
 		console.error('Failed to connect to the database:', err)
 	}
@@ -32,4 +31,6 @@ async function startServer() {
 
 if (process.env.NODE_ENV === 'production') {
 	startServer()
+} else {
+	connectToDb()
 }
