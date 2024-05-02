@@ -124,10 +124,10 @@ UFLRouter.post(
 							file_type: mimetype,
 							bucket: 'root',
 							url: encodeURI(vars.R2URL + `/${originalFilename}`),
-							value: res,
 						}
 					})
 				)
+				setResponseStatus(event, 201)
 				return uploadResponse
 			} catch (e: any) {
 				setResponseStatus(event, 500, 'Error uploading files')
@@ -137,12 +137,12 @@ UFLRouter.post(
 	})
 )
 
-UFLRouter.get(
-	'/',
-	defineEventHandler((event) => {
-		if (event.context.user) {
-			return event.context.user._doc
-		}
-		return 'Bye'
-	})
-)
+// UFLRouter.get(
+// 	'/',
+// 	defineEventHandler((event) => {
+// 		if (event.context.user) {
+// 			return event.context.user._doc
+// 		}
+// 		return 'Bye'
+// 	})
+// )
