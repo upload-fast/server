@@ -6,7 +6,7 @@ export const planSchema = new Schema(
 	{
 		active: Boolean,
 		plan_type: {
-			type: String,
+			type: mongoose.SchemaTypes.String,
 			required: true,
 		},
 		storageCap: {

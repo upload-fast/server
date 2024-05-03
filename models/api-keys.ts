@@ -6,7 +6,7 @@ const { Schema } = mongoose
 export const KeySchema = new Schema(
 	{
 		value: { type: String, unique: true, required: true },
-		user_id: { type: Types.ObjectId, index: true },
+		user_id: { type: mongoose.SchemaTypes.ObjectId, index: true },
 		active: { type: Boolean, default: false },
 	},
 	{ timestamps: true }

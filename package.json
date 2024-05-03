@@ -2,13 +2,12 @@
 	"name": "server",
 	"version": "0.0.1",
 	"description": "File Upload SDK",
-	"main": "index.js",
+	"main": "dist/index.js",
 	"type": "module",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"dev": "npx listhen -w ./index.ts",
-		"bui": "tsup-node ./index.ts --format esm --env.MONGO_URI mongodb+srv://iyifr:21320108Af@cluster0.avu9kyy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
-		"build": "tsup-node ./index.ts --format esm && copy .env dist\\.env"
+		"build": "tsup ./index.ts --format esm"
 	},
 	"keywords": [],
 	"author": "Iyimide Adekile",
@@ -23,6 +22,7 @@
 	},
 	"devDependencies": {
 		"@aws-sdk/types": "^3.535.0",
+		"@flydotio/dockerfile": "^0.5.7",
 		"@types/formidable": "^3.4.5",
 		"tsup": "^8.0.2",
 		"typescript": "^5.4.5"

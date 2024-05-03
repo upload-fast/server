@@ -9,6 +9,8 @@ export default async function Handler(event: H3Event) {
 		allowHeaders: '*',
 		methods: '*',
 	})
+
+	// Disable Auth Check if the request is for creating API Keys
 	if (event._path === '/api-key') {
 		return
 	}

@@ -1,4 +1,3 @@
-import 'dotenv/config'
 import { createApp } from 'h3'
 import { UFLRouter } from './routes/index.js'
 import { Key } from './models/api-keys.js'
@@ -16,7 +15,7 @@ export const app = createApp({
 
 app.use(UFLRouter)
 
-// Hehe
+// Production function call
 async function startServer() {
 	try {
 		await connectToDb()
@@ -29,8 +28,4 @@ async function startServer() {
 		.on('listening', () => console.log(`Running on ${process.env.PORT || 3000}`))
 }
 
-if (process.env.NODE_ENV === 'production') {
-	startServer()
-} else {
-	connectToDb()
-}
+startServer()
