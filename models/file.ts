@@ -7,7 +7,7 @@ export const fileSchema = new Schema(
 		file_name: String,
 		file_type: String,
 		file_size: Number,
-		plan_id: mongoose.Types.ObjectId,
+		plan_id: Types.ObjectId,
 		bucket: String,
 		url: String,
 	},

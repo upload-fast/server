@@ -17,6 +17,8 @@ import { calcFileSizeInKB } from '../utils/fileSize.js'
 import { UFile } from '../models/file.js'
 import { vars } from '../consts.js'
 import { User } from '../models/user.js'
+import { DeleteObjectCommand, DeleteObjectCommandInput } from '@aws-sdk/client-s3'
+import { S3 } from '../utils/s3.js'
 
 export const UFLRouter = createRouter()
 
@@ -137,12 +139,71 @@ UFLRouter.post(
 	})
 )
 
-// UFLRouter.get(
-// 	'/',
-// 	defineEventHandler((event) => {
-// 		if (event.context.user) {
-// 			return event.context.user._doc
-// 		}
-// 		return 'Bye'
-// 	})
-// )
+UFLRouter.delete(
+	'/upload',
+	defineEventHandler(async (event) => {
+		const key = event.context.key
+		const user = event.context.user._doc
+
+		const body = await readBody(event)
+
+		if (!body || !body.file_url) {
+			throw createError({
+				status: 400,
+				statusMessage: 'No URL provided in body',
+				statusText: 'No url found',
+			})
+		}
+
+		const file_url = body.file_url
+
+		const file = await UFile.findOne({ url: file_url })
+
+		if (!file) {
+			setResponseStatus(event, 400, 'File not found')
+			return { message: 'Error deleting file - file not found' }
+		}
+
+		if (file!.plan_id!.toString() !== user.plan._id.toString()) {
+			setResponseStatus(event, 403)
+			return {
+				message: 'You do not have permission to delete this file',
+			}
+		}
+
+		const params: DeleteObjectCommandInput = {
+			Bucket: 'root',
+			Key: file.file_name!,
+		}
+
+		const command = new DeleteObjectCommand(params)
+
+		try {
+			await S3.send(command)
+			await UFile.findByIdAndDelete(file._id)
+			const planUser = await User.findByIdAndUpdate(user._id)
+
+			planUser!.plan!.storageUsed = planUser!.plan!.storageUsed! - file.file_size!
+
+			await planUser?.save()
+
+			setResponseStatus(event, 200)
+			return { message: 'File deleted successfully' }
+		} catch (e: any) {
+			throw createError({
+				status: 500,
+				statusMessage: 'Failed to delete file - ' + e.message,
+			})
+		}
+	})
+)
+
+UFLRouter.get(
+	'/',
+	defineEventHandler((event) => {
+		if (event.context.user) {
+			return event.context.user._doc.plan._id.toString()
+		}
+		return 'Bye'
+	})
+)

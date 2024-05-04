@@ -28,4 +28,8 @@ async function startServer() {
 		.on('listening', () => console.log(`Running on ${process.env.PORT || 3000}`))
 }
 
-startServer()
+if (process.env.NODE_ENV === 'production') {
+	startServer()
+} else {
+	connectToDb()
+}
