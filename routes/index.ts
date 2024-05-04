@@ -50,6 +50,16 @@ UFLRouter.post(
 			})
 		}
 
+		const noOfKeys = await Key.countDocuments({ user_id: res.user_id })
+
+		if (noOfKeys >= 3) {
+			throw createError({
+				status: 400,
+				message: 'ApiKey Limit Exceeded',
+				statusMessage: 'Could not create API key - Limit Exceeded (3)',
+			})
+		}
+
 		try {
 			const key = generateRandomString(20)
 			await Key.create({ value: key, user_id: existingUser._id })
