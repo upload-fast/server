@@ -93,6 +93,18 @@ UFLRouter.post(
 			return `No files to upload!`
 		} else {
 			try {
+				// Get user from context
+				const user = event.context.user._doc
+
+				// Check if plan has been exceeded with some slight ojoro.
+				if (user!.plan!.storageUsed > user!.plan!.storageCap + 1024) {
+					throw createError({
+						statusCode: 400,
+						statusText: 'You have exceeded your storage limits',
+					})
+				}
+
+				// Go ahead and upload files.
 				const uploadResponse = await Promise.all(
 					data.files.map(async (file) => {
 						const { mimetype, originalFilename, size } = file
@@ -100,10 +112,6 @@ UFLRouter.post(
 						await UploadToR2({ file, bucket: 'root', image: isImage })
 
 						const file_size = calcFileSizeInKB(size)
-
-						const userId = event.context.user._doc._id
-
-						const res = await User.findById(userId)
 
 						await UFile.create({
 							file_name: originalFilename,
@@ -115,10 +123,16 @@ UFLRouter.post(
 							plan_id: res?.plan?._id,
 						})
 
-						// Update storage
-						res!.plan!.storageUsed! = res!.plan!.storageUsed! + file_size
+						// Pulling current user ID from context
+						const userId = user._id
 
-						await res?.save()
+						// We need to fetch so we can update - for some reason findByIdAndUpdate didn't work.
+						const userToUpdate = await User.findById(userId)
+
+						// Update storage level on embedded plan document in user
+						userToUpdate!.plan!.storageUsed! = userToUpdate!.plan!.storageUsed! + file_size
+
+						await userToUpdate?.save()
 
 						return {
 							file_name: originalFilename,
@@ -129,7 +143,8 @@ UFLRouter.post(
 						}
 					})
 				)
-				setResponseStatus(event, 201)
+				// Final response
+				setResponseStatus(event, 200, 'Files Uploaded')
 				return uploadResponse
 			} catch (e: any) {
 				setResponseStatus(event, 500, 'Error uploading files')
@@ -198,12 +213,12 @@ UFLRouter.delete(
 	})
 )
 
-UFLRouter.get(
-	'/',
-	defineEventHandler((event) => {
-		if (event.context.user) {
-			return event.context.user._doc.plan._id.toString()
-		}
-		return 'Bye'
-	})
-)
+// UFLRouter.get(
+// 	'/',
+// 	defineEventHandler((event) => {
+// 		if (event.context.user) {
+// 			return event.context.user._doc.plan._id.toString()
+// 		}
+// 		return 'Bye'
+// 	})
+// )
