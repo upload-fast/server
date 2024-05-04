@@ -11,28 +11,27 @@ export default async function Handler(event: H3Event) {
 	})
 
 	// Disable Auth Check if the request is for creating API Keys
-	if (event._path === '/api-key') {
-		return
-	}
-	const apikey = getRequestHeader(event, 'api-key')
-	if (!apikey) {
-		throw createError({
-			statusCode: 401,
-			statusMessage: 'No API key provided',
-		})
-	}
-	const existingKey = await Key.findOne({ value: apikey })
+	if (event.path !== '/api-key') {
+		const apikey = getRequestHeader(event, 'api-key')
+		if (!apikey) {
+			throw createError({
+				statusCode: 401,
+				statusMessage: 'No API key provided in request',
+			})
+		}
+		const existingKey = await Key.findOne({ value: apikey })
 
-	if (!existingKey) {
-		throw createError({
-			statusCode: 401,
-			statusMessage: 'Invalid API key',
-		})
-	}
+		if (!existingKey) {
+			throw createError({
+				statusCode: 401,
+				statusMessage: 'Invalid API key',
+			})
+		}
 
-	if (!event.context.key && !event.context.user) {
-		const user = await User.findById(existingKey.user_id).exec()
-		event.context.key = existingKey
-		event.context.user = user
+		if (!event.context.key && !event.context.user) {
+			const user = await User.findById(existingKey.user_id).exec()
+			event.context.key = existingKey
+			event.context.user = user
+		}
 	}
 }

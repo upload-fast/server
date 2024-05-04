@@ -32,7 +32,7 @@ UFLRouter.post(
 	defineEventHandler(async (event) => {
 		const res: ApiKeyRequest = await readBody(event)
 
-		if (!res.user_id || typeof res.user_id !== 'string') {
+		if (!res || !res.user_id || typeof res.user_id !== 'string') {
 			throw createError({
 				status: 400,
 				message: 'No user ID provided or bad format',
@@ -96,7 +96,7 @@ UFLRouter.post(
 				// Get user from context
 				const user = event.context.user._doc
 
-				// Check if plan has been exceeded with some slight ojoro.
+				// Check if plan has been exceeded. Add some slight ojoro.
 				if (user!.plan!.storageUsed > user!.plan!.storageCap + 1024) {
 					throw createError({
 						statusCode: 400,
