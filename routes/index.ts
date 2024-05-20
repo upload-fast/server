@@ -55,7 +55,7 @@ UFLRouter.post(
 		if (noOfKeys >= 3) {
 			throw createError({
 				status: 400,
-				message: 'ApiKey Limit Exceeded',
+				message: 'Api Key Limit Exceeded',
 				statusMessage: 'Could not create API key - Limit Exceeded (3)',
 			})
 		}
@@ -78,6 +78,25 @@ UFLRouter.post(
 		}
 	})
 )
+
+//API KEY DELETE ENDPOINT
+// UFLRouter.delete(
+// 	'/api-key',
+// 	defineEventHandler(async (event) => {
+// 		const body = await readBody(event)
+
+// 		if (!body) {
+// 			throw createError({
+// 				status: 400,
+// 				statusMessage: 'No body found',
+// 			})
+// 		}
+
+// 		const { user_id, apiKey } = body
+
+// 		const key = Key.findOneAndDelete({})
+// 	})
+// )
 
 // UPLOAD
 UFLRouter.get(
@@ -130,7 +149,7 @@ UFLRouter.post(
 							bucket: 'root',
 							url: encodeURI(vars.R2URL + `/${originalFilename}`),
 							// @ts-ignore
-							plan_id: res?.plan?._id,
+							plan_id: user?.plan?._id,
 						})
 
 						// Pulling current user ID from context

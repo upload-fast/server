@@ -28,6 +28,22 @@ export const planSchema = new Schema(
 		storageUsed: Number,
 		paid: { type: Boolean, default: false },
 		name: String,
+		uploadCap: {
+			type: Number,
+			default: function (this) {
+				//@ts-expect-error
+				switch (this.plan_type) {
+					case 'Trial':
+						return 50
+					case 'Tier 1':
+						return 5000
+					case 'Tier 2':
+						return 10000
+					default:
+						return 50
+				}
+			},
+		},
 	},
 	{
 		timestamps: true,
