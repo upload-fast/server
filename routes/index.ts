@@ -46,7 +46,6 @@ UFLRouter.post(
 			throw createError({
 				status: 400,
 				message: 'No user found to assign key to',
-				statusMessage: 'We could not find that user',
 			})
 		}
 
@@ -130,6 +129,7 @@ UFLRouter.post(
 					throw createError({
 						statusCode: 400,
 						statusText: 'You have exceeded your storage limits',
+						statusMessage: 'You have exceeded your storage limits',
 					})
 				}
 

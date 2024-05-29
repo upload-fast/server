@@ -28,6 +28,13 @@ export default async function Handler(event: H3Event) {
 			})
 		}
 
+		if (!existingKey.active) {
+			throw createError({
+				statusCode: 401,
+				statusMessage: 'Inactive API key, activate your api key',
+			})
+		}
+
 		if (!event.context.key && !event.context.user) {
 			const user = await User.findById(existingKey.user_id).exec()
 			event.context.key = existingKey
