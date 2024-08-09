@@ -25,6 +25,7 @@
 		"@aws-sdk/types": "^3.535.0",
 		"@flydotio/dockerfile": "^0.5.7",
 		"@types/formidable": "^3.4.5",
+		"jiti": "^1.21.6",
 		"tsup": "^8.0.2",
 		"typescript": "^5.4.5"
 	},

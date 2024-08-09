@@ -127,9 +127,19 @@ UFLRouter.post(
 				// Check if plan has been exceeded. Add some slight ojoro.
 				if (user!.plan!.storageUsed > user!.plan!.storageCap + 1024) {
 					throw createError({
-						statusCode: 400,
+						statusCode: 403,
 						statusText: 'You have exceeded your storage limits',
 						statusMessage: 'You have exceeded your storage limits',
+					})
+				}
+
+				const noOfFiles = await UFile.countDocuments({ plan_id: user.plan._id })
+
+				if (noOfFiles > user!.plan!.uploadCap) {
+					throw createError({
+						statusCode: 403,
+						statusText: 'You have exceeded your storage cap',
+						statusMessage: 'Storage cap depleted.',
 					})
 				}
 
@@ -184,48 +194,49 @@ UFLRouter.post(
 )
 
 UFLRouter.delete(
-	'/upload',
+	'/delete',
 	defineEventHandler(async (event) => {
-		const key = event.context.key
-		const user = event.context.user._doc
-
-		const body = await readBody(event)
-
-		if (!body || !body.file_url) {
-			throw createError({
-				status: 400,
-				statusMessage: 'No URL provided in body',
-				statusText: 'No url found',
-			})
-		}
-
-		const file_url = body.file_url
-
-		const file = await UFile.findOne({ url: file_url })
-
-		if (!file) {
-			setResponseStatus(event, 400, 'File not found')
-			return { message: 'Error deleting file - file not found' }
-		}
-
-		if (file!.plan_id!.toString() !== user.plan._id.toString()) {
-			setResponseStatus(event, 403)
-			return {
-				message: 'You do not have permission to delete this file',
-			}
-		}
-
-		const params: DeleteObjectCommandInput = {
-			Bucket: 'root',
-			Key: file.file_name!,
-		}
-
-		const command = new DeleteObjectCommand(params)
-
 		try {
+			const user = event.context.user._doc
+
+			const body = await readBody(event)
+
+			if (!body || !body.file_url) {
+				throw createError({
+					status: 400,
+					statusMessage: 'No URL provided in body',
+					statusText: 'No url found',
+				})
+			}
+
+			const file_url = body.file_url
+
+			const file = await UFile.findOne({ url: file_url })
+
+			if (!file) {
+				throw createError({
+					status: 400,
+					statusMessage: 'That file is not in your records.',
+					statusText: 'Resource not found',
+				})
+			}
+
+			if (file!.plan_id!.toString() !== user.plan._id.toString()) {
+				setResponseStatus(event, 403)
+				return {
+					message: 'You do not have permission to delete this file',
+				}
+			}
+
+			const params: DeleteObjectCommandInput = {
+				Bucket: 'root',
+				Key: file.file_name!,
+			}
+
+			const command = new DeleteObjectCommand(params)
 			await S3.send(command)
 			await UFile.findByIdAndDelete(file._id)
-			const planUser = await User.findByIdAndUpdate(user._id)
+			const planUser = await User.findById(user._id)
 
 			planUser!.plan!.storageUsed = planUser!.plan!.storageUsed! - file.file_size!
 
@@ -239,6 +250,24 @@ UFLRouter.delete(
 				statusMessage: 'Failed to delete file - ' + e.message,
 			})
 		}
+	})
+)
+
+UFLRouter.post(
+	'/upgrade',
+	defineEventHandler(async (event) => {
+		const body = await readBody(event)
+
+		const { plan, user } = body
+
+		if ((!plan && !user) || !plan || !user) {
+			throw createError({
+				status: 400,
+				statusMessage: 'Incomplete request body',
+			})
+		}
+		const planUser = await User.find({ name: user.name })
+		return planUser
 	})
 )
 

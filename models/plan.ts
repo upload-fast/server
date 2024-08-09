@@ -38,7 +38,7 @@ export const planSchema = new Schema(
 					case 'Tier 1':
 						return 5000
 					case 'Tier 2':
-						return 10000
+						return 1000000
 					default:
 						return 50
 				}

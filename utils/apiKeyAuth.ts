@@ -10,8 +10,10 @@ export default async function Handler(event: H3Event) {
 		methods: '*',
 	})
 
-	// Disable Auth Check if the request is for creating API Keys
-	if (event.path !== '/api-key') {
+	const excludedPaths = ['/api-key', '/upgrade']
+
+	// Don't run this code block if path is in the excludePaths.
+	if (!excludedPaths.includes(event.path)) {
 		const apikey = getRequestHeader(event, 'api-key')
 		if (!apikey) {
 			throw createError({
