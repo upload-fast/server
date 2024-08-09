@@ -7,5 +7,4 @@ node_modules/
 .env.local
 
 dist/
-fly.toml
 Dockerfile
