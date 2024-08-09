@@ -1,5 +1,5 @@
 import mongoose from 'mongoose'
-import { planSchema } from './Plan.js'
+import { planSchema } from './plan.js'
 
 const { Schema } = mongoose
 
