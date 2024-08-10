@@ -166,7 +166,7 @@ UFLRouter.post(
 						const userId = user._id
 
 						// We need to fetch so we can update - for some reason findByIdAndUpdate didn't work.
-						const userToUpdate = await User.findById(userId)
+						const userToUpdate = await User.findByIdAndUpdate(userId)
 
 						// Update storage level on embedded plan document in user
 						userToUpdate!.plan!.storageUsed! = userToUpdate!.plan!.storageUsed! + file_size
