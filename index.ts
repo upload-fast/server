@@ -18,6 +18,9 @@ app.use(UFLRouter)
 // Production function call
 async function startServer() {
 	try {
+		if (!process.env.MONGO_URI) {
+			throw new Error('MONGO_URI secret is not defined.')
+		}
 		await connectToDb()
 	} catch (err) {
 		console.error('Failed to connect to the database:', err)
