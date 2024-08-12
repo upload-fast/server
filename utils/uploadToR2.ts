@@ -9,17 +9,19 @@ export async function UploadToR2({
 	bucket,
 	image,
 	event,
+	fileKey,
 }: {
 	file: File
 	bucket: string
 	image: boolean
 	event?: H3Event
+	fileKey?: string
 }): Promise<{ error: boolean; payload: string }> {
 	const body = readFileSync(file.filepath)
 
 	const params: PutObjectCommandInput = {
 		Bucket: bucket,
-		Key: file.originalFilename as string | undefined,
+		Key: fileKey as string | undefined,
 		ContentLength: statSync(file.filepath).size,
 		Body: body,
 		ContentType: file.mimetype!,

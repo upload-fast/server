@@ -1,13 +1,4 @@
-import {
-	createError,
-	createRouter,
-	defaultContentType,
-	defineEventHandler,
-	readBody,
-	readFormData,
-	readRawBody,
-	setResponseStatus,
-} from 'h3'
+import { createError, createRouter, defineEventHandler, readBody, setResponseStatus } from 'h3'
 import { readFiles } from '../utils/readFiles.js'
 import type { ObjectId } from 'mongoose'
 import { Key } from '../models/api-keys.js'
@@ -148,16 +139,21 @@ UFLRouter.post(
 					data.files.map(async (file) => {
 						const { mimetype, originalFilename, size } = file
 						const isImage = file.mimetype?.startsWith('image/')!
-						await UploadToR2({ file, bucket: 'root', image: isImage })
+
+						const fileHash = generateRandomString(4)
+
+						const fileKey = `${originalFilename}-${fileHash}`
+
+						await UploadToR2({ file, bucket: 'root', image: isImage, fileKey })
 
 						const file_size = calcFileSizeInKB(size)
 
 						await UFile.create({
-							file_name: originalFilename,
+							file_name: fileKey,
 							file_size,
 							file_type: mimetype,
 							bucket: 'root',
-							url: encodeURI(vars.R2URL + `/${originalFilename}`),
+							url: encodeURI(vars.R2URL + `/${fileKey}`),
 							// @ts-ignore
 							plan_id: user?.plan?._id,
 						})
