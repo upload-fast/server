@@ -19,7 +19,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 9 # Adjust this to your preferred pnpm version
+          version: 8 # Adjust this to your preferred pnpm version
 
       - name: Install dependencies
         run: pnpm install
