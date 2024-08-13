@@ -1,38 +1,38 @@
-name: Fly Deploy
-on:
-  push:
-    branches:
-      - main # change to main if needed
-jobs:
-  deploy:
-    name: Deploy app
-    runs-on: ubuntu-latest
-    concurrency: deploy-group # optional: ensure only one action runs at a time
-    steps:
-      - uses: actions/checkout@v4
+# name: Fly Deploy
+# on:
+#   push:
+#     branches:
+#       - main # change to main if needed
+# jobs:
+#   deploy:
+#     name: Deploy app
+#     runs-on: ubuntu-latest
+#     concurrency: deploy-group # optional: ensure only one action runs at a time
+#     steps:
+#       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20' # Adjust this to your project's Node.js version
+#       - name: Setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: '20' # Adjust this to your project's Node.js version
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8 # Adjust this to your preferred pnpm version
+#       - name: Install pnpm
+#         uses: pnpm/action-setup@v2
+#         with:
+#           version: 8 # Adjust this to your preferred pnpm version
 
-      - name: Install dependencies
-        run: pnpm install
+#       - name: Install dependencies
+#         run: pnpm install
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+#       - uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - name: Deploy to Fly.io
-        run: |
-          pnpm build
-          flyctl deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
-          ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY_ID }}
-          SECRET_ACCESS_KEY: ${{ secrets.SECRET_ACCESS_KEY }}
-          MONGO_URI: ${{ secrets.MONGO_URI }}
+#       - name: Deploy to Fly.io
+#         run: |
+#           pnpm build
+#           flyctl deploy --remote-only
+#         env:
+#           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+#           ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
+#           ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY_ID }}
+#           SECRET_ACCESS_KEY: ${{ secrets.SECRET_ACCESS_KEY }}
+#           MONGO_URI: ${{ secrets.MONGO_URI }}

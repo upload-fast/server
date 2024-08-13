@@ -2,7 +2,7 @@ import { createError, createRouter, defineEventHandler, readBody, setResponseSta
 import { readFiles } from '../utils/readFiles.js'
 import type { ObjectId } from 'mongoose'
 import { Key } from '../models/api-keys.js'
-import { generateRandomString } from '../utils/randomvalue.js'
+import { generateRandomString, uuid } from '../utils/randomvalue.js'
 import { UploadToR2 } from '../utils/uploadToR2.js'
 import { calcFileSizeInKB } from '../utils/fileSize.js'
 import { UFile } from '../models/file.js'
@@ -140,9 +140,10 @@ UFLRouter.post(
 						const { mimetype, originalFilename, size } = file
 						const isImage = file.mimetype?.startsWith('image/')!
 
-						const fileHash = generateRandomString(4)
+						const fileHash = uuid({ length: 4, withPrefix: false })
 
-						const fileKey = `${originalFilename}-${fileHash}`
+						const fileKey = `${fileHash}-${originalFilename}`
+						const fileUrl = encodeURI(vars.R2URL + `/${fileKey}`)
 
 						await UploadToR2({ file, bucket: 'root', image: isImage, fileKey })
 
@@ -153,7 +154,7 @@ UFLRouter.post(
 							file_size,
 							file_type: mimetype,
 							bucket: 'root',
-							url: encodeURI(vars.R2URL + `/${fileKey}`),
+							url: fileUrl,
 							// @ts-ignore
 							plan_id: user?.plan?._id,
 						})
@@ -170,11 +171,11 @@ UFLRouter.post(
 						await userToUpdate?.save()
 
 						return {
-							file_name: originalFilename,
+							file_name: fileKey,
 							file_size,
 							file_type: mimetype,
 							bucket: 'root',
-							url: encodeURI(vars.R2URL + `/${originalFilename}`),
+							url: fileUrl,
 						}
 					})
 				)

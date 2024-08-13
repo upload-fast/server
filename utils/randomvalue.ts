@@ -17,3 +17,19 @@ export function generateRandomString(
 	}
 	return 'ufl_' + result
 }
+
+export function uuid({
+	length,
+	alphabet = '0123456789abcdefghijklmnopqrstuvwxyz',
+	withPrefix = true,
+}: {
+	length: number
+	alphabet?: string
+	withPrefix: boolean
+}) {
+	let result = ''
+	for (let i = 0; i < length; i++) {
+		result += alphabet[generateRandomInteger(alphabet.length)]
+	}
+	return withPrefix ? 'ufl_' + result : result
+}
