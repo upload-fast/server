@@ -1,10 +1,10 @@
 import { createApp } from 'h3'
 import { UFLRouter } from './routes/index.js'
-import { Key } from './models/api-keys.js'
 import Handler from './utils/apiKeyAuth.js'
 import { createServer } from 'node:http'
 import { toNodeListener } from 'h3'
 import { connectToDb } from './utils/db.js'
+import 'dotenv/config'
 
 export const app = createApp({
 	onRequest: Handler,

@@ -1,3 +1,5 @@
+import os from 'node:os'
+
 function generateRandomInteger(max: number): number {
 	const bytes = new Uint8Array(1)
 	crypto.getRandomValues(bytes)
@@ -33,3 +35,12 @@ export function uuid({
 	}
 	return withPrefix ? 'ufl_' + result : result
 }
+
+export function addHashToFileName(fileName: string, hash: string) {
+	const splits = fileName.split('.')
+	splits[0] = splits[0] + `-${hash}.`
+
+	return splits.join('')
+}
+
+console.log(os.tmpdir())

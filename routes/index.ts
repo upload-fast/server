@@ -2,7 +2,7 @@ import { createError, createRouter, defineEventHandler, readBody, setResponseSta
 import { readFiles } from '../utils/readFiles.js'
 import type { ObjectId } from 'mongoose'
 import { Key } from '../models/api-keys.js'
-import { generateRandomString, uuid } from '../utils/randomvalue.js'
+import { addHashToFileName, generateRandomString, uuid } from '../utils/randomvalue.js'
 import { UploadToR2 } from '../utils/uploadToR2.js'
 import { calcFileSizeInKB } from '../utils/fileSize.js'
 import { UFile } from '../models/file.js'
@@ -142,10 +142,10 @@ UFLRouter.post(
 
 						const fileHash = uuid({ length: 4, withPrefix: false })
 
-						const fileKey = `${fileHash}-${originalFilename}`
+						const fileKey = addHashToFileName(originalFilename!, fileHash)
 						const fileUrl = encodeURI(vars.R2URL + `/${fileKey}`)
 
-						await UploadToR2({ file, bucket: 'root', image: isImage, fileKey })
+						await UploadToR2({ file, fileKey, isImage, bucket: 'root', event })
 
 						const file_size = calcFileSizeInKB(size)
 
@@ -162,7 +162,7 @@ UFLRouter.post(
 						// Pulling current user ID from context
 						const userId = user._id
 
-						// We need to fetch so we can update - for some reason findByIdAndUpdate didn't work.
+						// We need to fetch so we can update - for some reason findByIdAndUpdate directly didn't work.
 						const userToUpdate = await User.findByIdAndUpdate(userId)
 
 						// Update storage level on embedded plan document in user
@@ -247,24 +247,6 @@ UFLRouter.delete(
 				statusMessage: 'Failed to delete file - ' + e.message,
 			})
 		}
-	})
-)
-
-UFLRouter.post(
-	'/upgrade',
-	defineEventHandler(async (event) => {
-		const body = await readBody(event)
-
-		const { plan, user } = body
-
-		if ((!plan && !user) || !plan || !user) {
-			throw createError({
-				status: 400,
-				statusMessage: 'Incomplete request body',
-			})
-		}
-		const planUser = await User.find({ name: user.name })
-		return planUser
 	})
 )
 

@@ -1,5 +1,5 @@
-import { H3Event, defaultContentType, send, setResponseStatus } from 'h3'
-import type { Fields, Files, Options } from 'formidable'
+import { H3Event } from 'h3'
+import type { Options } from 'formidable'
 import formidable from 'formidable'
 import { File } from 'formidable'
 
@@ -10,14 +10,10 @@ interface ReadFilesOptions extends Options {
 export async function readFiles(
 	event: H3Event,
 	options?: ReadFilesOptions
-): Promise<
-	| {
-			files: File[] | null
-			success: boolean
-			error?: { value: boolean; payload?: Record<any, any> }
-	  }
-	| { files: null; error: { value: boolean; payload?: Record<any, any> } }
-> {
+): Promise<{
+	files: File[] | null
+	success: boolean
+}> {
 	const form = formidable(options)
 
 	try {
@@ -30,10 +26,7 @@ export async function readFiles(
 	} catch (err) {
 		return {
 			files: null,
-			error: {
-				value: true,
-				payload: err as Record<any, any>,
-			},
+			success: false,
 		}
 	}
 }
