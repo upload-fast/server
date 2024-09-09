@@ -1,7 +1,7 @@
 {
 	"name": "server",
 	"version": "0.0.1",
-	"description": "File Upload SDK",
+	"description": "File Upload Server",
 	"main": "dist/index.js",
 	"type": "module",
 	"scripts": {

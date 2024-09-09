@@ -43,4 +43,3 @@ export function addHashToFileName(fileName: string, hash: string) {
 	return splits.join('')
 }
 
-console.log(os.tmpdir())

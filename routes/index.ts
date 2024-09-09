@@ -10,7 +10,7 @@ import { vars } from '../consts.js'
 import { User } from '../models/user.js'
 import { DeleteObjectCommand, DeleteObjectCommandInput } from '@aws-sdk/client-s3'
 import { S3 } from '../utils/s3.js'
-
+import { hashString } from '../utils/hashing.js'
 export const UFLRouter = createRouter()
 
 type ApiKeyRequest = {
@@ -52,6 +52,8 @@ UFLRouter.post(
 
 		try {
 			const key = generateRandomString(20)
+
+			// TODO - (HASHING) - await Key.create({ value: hashString(key), user_id: existingUser._id })
 			await Key.create({ value: key, user_id: existingUser._id })
 			setResponseStatus(event, 201, 'Created API key successfully')
 			return {

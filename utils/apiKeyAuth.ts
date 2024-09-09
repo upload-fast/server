@@ -1,6 +1,7 @@
 import { H3Event, appendCorsHeaders, createError, getRequestHeader } from 'h3'
 import { Key } from '../models/api-keys.js'
 import { User } from '../models/user.js'
+import { hashString } from './hashing.js'
 
 export default async function Handler(event: H3Event) {
 	// handle cors
@@ -21,7 +22,9 @@ export default async function Handler(event: H3Event) {
 				statusMessage: 'No API key provided in request',
 			})
 		}
-		const existingKey = await Key.findOne({ value: apikey })
+
+		let existingKey =
+			(await Key.findOne({ value: apikey })) ?? (await Key.findOne({ value: hashString(apikey) }))
 
 		if (!existingKey) {
 			throw createError({
