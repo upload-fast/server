@@ -53,8 +53,7 @@ UFLRouter.post(
 		try {
 			const key = generateRandomString(20)
 
-			// TODO - (HASHING) - await Key.create({ value: hashString(key), user_id: existingUser._id })
-			await Key.create({ value: key, user_id: existingUser._id })
+			await Key.create({ value: hashString(key), user_id: existingUser._id })
 			setResponseStatus(event, 201, 'Created API key successfully')
 			return {
 				success: true,
