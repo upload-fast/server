@@ -1,9 +1,9 @@
 import { createApp } from 'h3'
 import { UFLRouter } from './routes/index.js'
-import Handler from './utils/apiKeyAuth.js'
+import Handler from './lib/api-key-auth-middleware.js'
 import { createServer } from 'node:http'
 import { toNodeListener } from 'h3'
-import { connectToDb } from './utils/db.js'
+import { connectToDb } from './lib/db.js'
 import 'dotenv/config'
 
 export const app = createApp({

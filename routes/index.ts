@@ -1,16 +1,16 @@
 import { createError, createRouter, defineEventHandler, readBody, setResponseStatus } from 'h3'
-import { readFiles } from '../utils/readFiles.js'
+import { readFiles } from '../lib/read-files.js'
 import type { ObjectId } from 'mongoose'
 import { Key } from '../models/api-keys.js'
-import { addHashToFileName, generateRandomString, uuid } from '../utils/randomvalue.js'
-import { UploadToR2 } from '../utils/uploadToR2.js'
-import { calcFileSizeInKB } from '../utils/fileSize.js'
+import { addHashToFileName, generateRandomString, uuid } from '../lib/custom-uuid.js'
+import { UploadToR2 } from '../lib/upload-with-s3-client.js'
+import { calcFileSizeInKB } from '../lib/file-size.js'
 import { UFile } from '../models/file.js'
 import { vars } from '../consts.js'
 import { User } from '../models/user.js'
 import { DeleteObjectCommand, DeleteObjectCommandInput } from '@aws-sdk/client-s3'
-import { S3 } from '../utils/s3.js'
-import { hashString } from '../utils/hashing.js'
+import { S3 } from '../lib/s3-client.js'
+import { hashString } from '../lib/hash-helpers.js'
 export const UFLRouter = createRouter()
 
 type ApiKeyRequest = {

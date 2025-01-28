@@ -1,7 +1,7 @@
 import { H3Event, appendCorsHeaders, createError, getRequestHeader } from 'h3'
 import { Key } from '../models/api-keys.js'
 import { User } from '../models/user.js'
-import { hashString } from './hashing.js'
+import { hashString } from './hash-helpers.js'
 
 export default async function Handler(event: H3Event) {
 	// handle cors

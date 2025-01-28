@@ -1,5 +1,5 @@
 import mongoose, { Types } from 'mongoose'
-import { connectToDb } from '../utils/db.js'
+import { connectToDb } from '../lib/db.js'
 
 const { Schema } = mongoose
 

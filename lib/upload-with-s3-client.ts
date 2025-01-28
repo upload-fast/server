@@ -1,6 +1,6 @@
 import { File } from 'formidable'
 import { PutObjectCommand, PutObjectCommandInput } from '@aws-sdk/client-s3'
-import { S3 } from './s3.js'
+import { S3 } from './s3-client.js'
 import { statSync, unlinkSync, createReadStream } from 'node:fs'
 import { H3Event, setResponseStatus } from 'h3'
 
