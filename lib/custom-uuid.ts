@@ -1,4 +1,4 @@
-import os from 'node:os'
+
 
 function generateRandomInteger(max: number): number {
 	const bytes = new Uint8Array(1)
@@ -39,7 +39,7 @@ export function uuid({
 		.join('')
 
 	// Format as UUID with dashes, using first 32 chars for standard UUID format
-	const uuid = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20,32)}`
+	const uuid = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`
 
 	// Add timestamp to make it even more unique
 	const timestamp = Date.now().toString(36)

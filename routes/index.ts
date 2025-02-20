@@ -14,23 +14,6 @@ import { hashString } from '../lib/hash-helpers.js'
 
 export const UFLRouter = createRouter()
 
-// Test router for development and testing purposes
-export const TestRouter = createRouter()
-
-TestRouter.get(
-	'/test',
-	defineEventHandler(async (event) => {
-		try {
-			return { message: 'Test endpoint working' }
-		} catch (e: any) {
-			throw createError({
-				status: 500,
-				statusMessage: 'Test endpoint error - ' + e.message
-			})
-		}
-	})
-)
-
 type ApiKeyRequest = {
 	user_id?: ObjectId
 }
@@ -149,12 +132,20 @@ UFLRouter.post(
 				})
 			}
 
-			const noOfFiles = await UFile.countDocuments({ plan_id: user.plan._id })
+			const currentMonth = new Date().getMonth()
+			const currentYear = new Date().getFullYear()
+			const noOfFilesUploadedThisMonth = await UFile.countDocuments({
+				plan_id: user.plan._id,
+				createdAt: {
+					$gte: new Date(currentYear, currentMonth, 1),
+					$lt: new Date(currentYear, currentMonth + 1, 1)
+				}
+			})
 
-			if (noOfFiles > user!.plan!.uploadCap) {
+			if (noOfFilesUploadedThisMonth > user?.plan?.uploadCap) {
 				throw createError({
 					statusCode: 403,
-					statusText: 'You have exceeded your storage cap',
+					statusText: 'You have exceeded your storage cap this month, upgrade to a higher plan to continue uploading.',
 					statusMessage: 'Storage cap depleted.',
 				})
 			}
@@ -165,7 +156,7 @@ UFLRouter.post(
 					const { mimetype, originalFilename, size } = file
 					const isImage = file.mimetype?.startsWith('image/')!
 
-					const fileHash = uuid({ withPrefix: false })
+					const fileHash = generateRandomString(4)
 
 					const fileKey = addHashToFileName(originalFilename!, fileHash)
 					const fileUrl = encodeURI(vars.R2URL + `/${fileKey}`)

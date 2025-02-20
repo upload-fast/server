@@ -1,5 +1,5 @@
 import { createApp } from 'h3'
-import { TestRouter, UFLRouter } from './routes/index.js'
+import { UFLRouter } from './routes/index.js'
 import Handler from './lib/api-key-auth-middleware.js'
 import { createServer } from 'node:http'
 import { toNodeListener } from 'h3'
