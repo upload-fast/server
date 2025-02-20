@@ -56,4 +56,4 @@ export class CloudflareR2Client extends BaseS3Client {
 	}
 }
 
-export const S3 = new CloudflareR2Client().getClient()
+export const R2 = new CloudflareR2Client().getClient()

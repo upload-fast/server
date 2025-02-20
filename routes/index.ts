@@ -9,7 +9,7 @@ import { UFile } from '../models/file.js'
 import { vars } from '../consts.js'
 import { User } from '../models/user.js'
 import { DeleteObjectCommand, DeleteObjectCommandInput } from '@aws-sdk/client-s3'
-import { S3 } from '../lib/s3-client.js'
+import { R2 } from '../lib/s3-client.js'
 import { hashString } from '../lib/hash-helpers.js'
 
 export const UFLRouter = createRouter()
@@ -255,7 +255,7 @@ UFLRouter.delete(
 			}
 
 			const command = new DeleteObjectCommand(params)
-			await S3.send(command)
+			await R2.send(command)
 			await UFile.findByIdAndDelete(file._id)
 			const planUser = await User.findById(user._id)
 
