@@ -8,6 +8,7 @@ export const KeySchema = new Schema(
 		value: { type: String, unique: true, required: true },
 		user_id: { type: mongoose.SchemaTypes.ObjectId, index: true },
 		active: { type: Boolean, default: false },
+		name: { type: String, unique: true },
 	},
 	{ timestamps: true }
 )

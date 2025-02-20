@@ -11,7 +11,25 @@ import { User } from '../models/user.js'
 import { DeleteObjectCommand, DeleteObjectCommandInput } from '@aws-sdk/client-s3'
 import { S3 } from '../lib/s3-client.js'
 import { hashString } from '../lib/hash-helpers.js'
+
 export const UFLRouter = createRouter()
+
+// Test router for development and testing purposes
+export const TestRouter = createRouter()
+
+TestRouter.get(
+	'/test',
+	defineEventHandler(async (event) => {
+		try {
+			return { message: 'Test endpoint working' }
+		} catch (e: any) {
+			throw createError({
+				status: 500,
+				statusMessage: 'Test endpoint error - ' + e.message
+			})
+		}
+	})
+)
 
 type ApiKeyRequest = {
 	user_id?: ObjectId
@@ -46,7 +64,7 @@ UFLRouter.post(
 			throw createError({
 				status: 400,
 				message: 'Api Key Limit Exceeded',
-				statusMessage: 'Could not create API key - Limit Exceeded (3)',
+				statusMessage: 'Could not create API key - Limit Exceeded (5)',
 			})
 		}
 
@@ -70,24 +88,30 @@ UFLRouter.post(
 	})
 )
 
-//API KEY DELETE ENDPOINT
-// UFLRouter.delete(
-// 	'/api-key',
-// 	defineEventHandler(async (event) => {
-// 		const body = await readBody(event)
+UFLRouter.delete(
+	'/api-key',
+	defineEventHandler(async (event) => {
+		const body = await readBody(event)
 
-// 		if (!body) {
-// 			throw createError({
-// 				status: 400,
-// 				statusMessage: 'No body found',
-// 			})
-// 		}
+		if (!body) {
+			throw createError({
+				status: 400,
+				statusMessage: 'No body found',
+			})
+		}
 
-// 		const { user_id, apiKey } = body
+		try {
+			const { user_id, apiKey } = body
 
-// 		const key = Key.findOneAndDelete({})
-// 	})
-// )
+			await Key.findOneAndDelete({ value: apiKey, user_id })
+		} catch (e) {
+			throw createError({
+				status: 500,
+				statusMessage: 'Failed to delete key',
+			})
+		}
+	})
+)
 
 // UPLOAD
 UFLRouter.get(
@@ -111,82 +135,81 @@ UFLRouter.post(
 		if (!data.files) {
 			setResponseStatus(event, 404, 'No files found')
 			return `No files to upload!`
-		} else {
-			try {
-				// Get user from context
-				const user = event.context.user._doc
+		}
 
-				// Check if plan has been exceeded. Add some slight ojoro.
-				if (user!.plan!.storageUsed > user!.plan!.storageCap + 1024) {
-					throw createError({
-						statusCode: 403,
-						statusText: 'You have exceeded your storage limits',
-						statusMessage: 'You have exceeded your storage limits',
-					})
-				}
+		try {
+			// Get user from context
+			const user = event.context.user._doc
 
-				const noOfFiles = await UFile.countDocuments({ plan_id: user.plan._id })
-
-				if (noOfFiles > user!.plan!.uploadCap) {
-					throw createError({
-						statusCode: 403,
-						statusText: 'You have exceeded your storage cap',
-						statusMessage: 'Storage cap depleted.',
-					})
-				}
-
-				// Go ahead and upload files.
-				const uploadResponse = await Promise.all(
-					data.files.map(async (file) => {
-						const { mimetype, originalFilename, size } = file
-						const isImage = file.mimetype?.startsWith('image/')!
-
-						const fileHash = uuid({ length: 4, withPrefix: false })
-
-						const fileKey = addHashToFileName(originalFilename!, fileHash)
-						const fileUrl = encodeURI(vars.R2URL + `/${fileKey}`)
-
-						await UploadToR2({ file, fileKey, isImage, bucket: 'root', event })
-
-						const file_size = calcFileSizeInKB(size)
-
-						await UFile.create({
-							file_name: fileKey,
-							file_size,
-							file_type: mimetype,
-							bucket: 'root',
-							url: fileUrl,
-							// @ts-ignore
-							plan_id: user?.plan?._id,
-						})
-
-						// Pulling current user ID from context
-						const userId = user._id
-
-						// We need to fetch so we can update - for some reason findByIdAndUpdate directly didn't work.
-						const userToUpdate = await User.findByIdAndUpdate(userId)
-
-						// Update storage level on embedded plan document in user
-						userToUpdate!.plan!.storageUsed! = userToUpdate!.plan!.storageUsed! + file_size
-
-						await userToUpdate?.save()
-
-						return {
-							file_name: fileKey,
-							file_size,
-							file_type: mimetype,
-							bucket: 'root',
-							url: fileUrl,
-						}
-					})
-				)
-				// Final response
-				setResponseStatus(event, 200, 'Files Uploaded')
-				return uploadResponse
-			} catch (e: any) {
-				setResponseStatus(event, 500, 'Error uploading files')
-				return { payload: e.message, message: 'Error uploading files' }
+			if (user!.plan!.storageUsed > user!.plan!.storageCap) {
+				throw createError({
+					statusCode: 403,
+					statusText: 'You have exceeded your storage limits',
+					statusMessage: 'You have exceeded your storage limits',
+				})
 			}
+
+			const noOfFiles = await UFile.countDocuments({ plan_id: user.plan._id })
+
+			if (noOfFiles > user!.plan!.uploadCap) {
+				throw createError({
+					statusCode: 403,
+					statusText: 'You have exceeded your storage cap',
+					statusMessage: 'Storage cap depleted.',
+				})
+			}
+
+			// Go ahead and upload files.
+			const uploadResponse = await Promise.all(
+				data.files.map(async (file) => {
+					const { mimetype, originalFilename, size } = file
+					const isImage = file.mimetype?.startsWith('image/')!
+
+					const fileHash = uuid({ length: 4, withPrefix: false })
+
+					const fileKey = addHashToFileName(originalFilename!, fileHash)
+					const fileUrl = encodeURI(vars.R2URL + `/${fileKey}`)
+
+					await UploadToR2({ file, fileKey, isImage, bucket: 'root', event })
+
+					const file_size = calcFileSizeInKB(size)
+
+					await UFile.create({
+						file_name: fileKey,
+						file_size,
+						file_type: mimetype,
+						bucket: 'root',
+						url: fileUrl,
+						// @ts-ignore
+						plan_id: user?.plan?._id,
+					})
+
+					// Pulling current user ID from context
+					const userId = user._id
+
+					// We need to fetch so we can update - for some reason findByIdAndUpdate directly didn't work.
+					const userToUpdate = await User.findByIdAndUpdate(userId)
+
+					// Update storage level on embedded plan document in user
+					userToUpdate!.plan!.storageUsed! = userToUpdate!.plan!.storageUsed! + file_size
+
+					await userToUpdate?.save()
+
+					return {
+						file_name: fileKey,
+						file_size,
+						file_type: mimetype,
+						bucket: 'root',
+						url: fileUrl,
+					}
+				})
+			)
+			// Final response
+			setResponseStatus(event, 200, 'Files Uploaded')
+			return uploadResponse
+		} catch (e: any) {
+			setResponseStatus(event, 500, 'Error uploading files')
+			return { payload: e.message, message: 'Error uploading files' }
 		}
 	})
 )

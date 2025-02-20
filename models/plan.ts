@@ -1,4 +1,4 @@
-import mongoose, { Types } from 'mongoose'
+import mongoose from 'mongoose'
 
 const { Schema } = mongoose
 
@@ -12,16 +12,17 @@ export const planSchema = new Schema(
 		storageCap: {
 			type: Number,
 			default: function (this) {
+				const GB_IN_KB = 2 ** 20 // 1GB in kilobytes
 				//@ts-expect-error
 				switch (this.plan_type) {
 					case 'Trial':
-						return 1048576
+						return GB_IN_KB // 1GB storage
 					case 'Tier 1':
-						return 5242880
+						return 15 * GB_IN_KB // 15GB storage
 					case 'Tier 2':
-						return 10485760
+						return 120 * GB_IN_KB // 120GB storage
 					default:
-						return '1048576'
+						return GB_IN_KB // Default 1GB storage
 				}
 			},
 		},
@@ -33,12 +34,12 @@ export const planSchema = new Schema(
 			default: function (this) {
 				//@ts-expect-error
 				switch (this.plan_type) {
-					case 'Trial':
+					case 'Quick Fix':
 						return 500
 					case 'Tier 1':
 						return 5000
 					case 'Tier 2':
-						return 1000000
+						return 10 ** 3
 					default:
 						return 500
 				}

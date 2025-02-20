@@ -15,7 +15,7 @@ export default async function Handler(event: H3Event) {
 
 	// Don't run this code block if path is in the excludePaths.
 	if (!excludedPaths.includes(event.path)) {
-		const apikey = getRequestHeader(event, 'api-key')
+		const apikey = getRequestHeader(event, 'api-key') || getRequestHeader(event, 'x-api-key')
 		if (!apikey) {
 			throw createError({
 				statusCode: 401,
@@ -25,6 +25,7 @@ export default async function Handler(event: H3Event) {
 
 		let existingKey =
 			(await Key.findOne({ value: apikey })) ?? (await Key.findOne({ value: hashString(apikey) }))
+
 
 		if (!existingKey) {
 			throw createError({

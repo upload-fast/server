@@ -1,15 +1,14 @@
-import mongoose, { Types } from 'mongoose'
-
-const { Schema } = mongoose
+import mongoose, { Types, Schema } from 'mongoose'
 
 export const fileSchema = new Schema(
 	{
 		file_name: String,
 		file_type: String,
 		file_size: Number,
-		plan_id: Types.ObjectId,
+		plan_id: Schema.Types.ObjectId,
 		bucket: String,
 		url: String,
+		appId: Schema.Types.ObjectId,
 	},
 	{
 		timestamps: true,
