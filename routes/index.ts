@@ -165,7 +165,7 @@ UFLRouter.post(
 					const { mimetype, originalFilename, size } = file
 					const isImage = file.mimetype?.startsWith('image/')!
 
-					const fileHash = uuid({ length: 4, withPrefix: false })
+					const fileHash = uuid({ withPrefix: false })
 
 					const fileKey = addHashToFileName(originalFilename!, fileHash)
 					const fileUrl = encodeURI(vars.R2URL + `/${fileKey}`)
