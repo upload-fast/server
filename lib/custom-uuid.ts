@@ -11,13 +11,14 @@ function generateRandomInteger(max: number): number {
 
 export function generateRandomString(
 	length: number,
-	alphabet: string = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	alphabet: string = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+	withPrefix: boolean = true
 ): string {
 	let result = ''
 	for (let i = 0; i < length; i++) {
 		result += alphabet[generateRandomInteger(alphabet.length)]
 	}
-	return 'ufl_' + result
+	return withPrefix ? 'ufl_' + result : result
 }
 
 export function uuid({

@@ -1,16 +1,16 @@
-import { createError, createRouter, defineEventHandler, readBody, setResponseStatus } from 'h3'
-import { readFiles } from '../lib/read-files.js'
-import type { ObjectId } from 'mongoose'
-import { Key } from '../models/api-keys.js'
-import { addHashToFileName, generateRandomString, uuid } from '../lib/custom-uuid.js'
-import { UploadToR2 } from '../lib/upload-with-s3-client.js'
-import { calcFileSizeInKB } from '../lib/file-size.js'
-import { UFile } from '../models/file.js'
-import { vars } from '../consts.js'
-import { User } from '../models/user.js'
 import { DeleteObjectCommand, DeleteObjectCommandInput } from '@aws-sdk/client-s3'
-import { R2 } from '../lib/s3-client.js'
+import { createError, createRouter, defineEventHandler, readBody, setResponseStatus } from 'h3'
+import type { ObjectId } from 'mongoose'
+import { vars } from '../consts.js'
+import { addHashToFileName, generateRandomString } from '../lib/custom-uuid.js'
+import { calcFileSizeInKB } from '../lib/file-size.js'
 import { hashString } from '../lib/hash-helpers.js'
+import { readFiles } from '../lib/read-files.js'
+import { R2 } from '../lib/s3-client.js'
+import { UploadToR2 } from '../lib/upload-with-s3-client.js'
+import { Key } from '../models/api-keys.js'
+import { UFile } from '../models/file.js'
+import { User } from '../models/user.js'
 
 export const UFLRouter = createRouter()
 
@@ -32,35 +32,36 @@ UFLRouter.post(
 			})
 		}
 
-		const existingUser = await User.findById(res.user_id)
-
-		if (!existingUser) {
-			throw createError({
-				status: 400,
-				message: 'No user found to assign key to',
-			})
-		}
-
-		const noOfKeys = await Key.countDocuments({ user_id: res.user_id })
-
-		if (noOfKeys >= 3) {
-			throw createError({
-				status: 400,
-				message: 'Api Key Limit Exceeded',
-				statusMessage: 'Could not create API key - Limit Exceeded (5)',
-			})
-		}
-
 		try {
+			const existingUser = await User.findById(res.user_id)
+
+			if (!existingUser) {
+				throw createError({
+					status: 400,
+					message: 'No user found to assign key to',
+				})
+			}
+			const noOfKeys = await Key.countDocuments({ user_id: res.user_id })
+
+			if (noOfKeys >= 3) {
+				throw createError({
+					status: 400,
+					message: 'Api Key Limit Exceeded',
+					statusMessage: 'Could not create API key - Limit Exceeded (3)',
+				})
+			}
+
 			const key = generateRandomString(20)
 
 			await Key.create({ value: hashString(key), user_id: existingUser._id })
+
 			setResponseStatus(event, 201, 'Created API key successfully')
 			return {
 				success: true,
 				message: 'Created API key successfully',
 				payload: key,
 			}
+
 		} catch (e) {
 			throw createError({
 				status: 500,
@@ -142,7 +143,7 @@ UFLRouter.post(
 				}
 			})
 
-			if (noOfFilesUploadedThisMonth > user?.plan?.uploadCap) {
+			if (noOfFilesUploadedThisMonth > user?.plan?.uploadCap && user?.plan?.plan_type !== 'Tier 2') {
 				throw createError({
 					statusCode: 403,
 					statusText: 'You have exceeded your storage cap this month, upgrade to a higher plan to continue uploading.',
@@ -227,7 +228,7 @@ UFLRouter.delete(
 
 			if (!file) {
 				throw createError({
-					status: 400,
+					status: 404,
 					statusMessage: 'That file is not in your records.',
 					statusText: 'Resource not found',
 				})
