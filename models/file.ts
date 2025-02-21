@@ -5,10 +5,9 @@ export const fileSchema = new Schema(
 		file_name: String,
 		file_type: String,
 		file_size: Number,
-		plan_id: Schema.Types.ObjectId,
 		bucket: String,
 		url: String,
-		appId: Schema.Types.ObjectId,
+		app_id: { type: Schema.Types.ObjectId, ref: 'apps', required: true },
 	},
 	{
 		timestamps: true,

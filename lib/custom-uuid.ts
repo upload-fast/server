@@ -10,9 +10,15 @@ function generateRandomInteger(max: number): number {
 }
 
 export function generateRandomString(
-	length: number,
-	alphabet: string = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-	withPrefix: boolean = true
+	{
+		length,
+		alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+		withPrefix = true
+	}: {
+		length: number,
+		alphabet?: string,
+		withPrefix?: boolean
+	}
 ): string {
 	let result = ''
 	for (let i = 0; i < length; i++) {
