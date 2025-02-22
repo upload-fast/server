@@ -12,6 +12,8 @@ export async function validateAppMiddleware(event: H3Event) {
     }
 
     const user = event.context.user._doc
+
+
     const app = await App.findOne({
         name: appName,
         userId: user._id

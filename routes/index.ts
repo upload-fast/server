@@ -11,46 +11,23 @@ import { validateAppMiddleware } from '../middleware/app-validator.js'
 import { Key } from '../models/api-keys.js'
 import { App, IApp } from '../models/app.js'
 import { UFile } from '../models/file.js'
-import { FileValidationService } from '../services/file-validation.js'
+import { FileValidationService } from '../services/file-validation-service.js'
 import { User } from '../models/user.js'
+import { readUploadFastApp } from '../lib/read-app.js'
 
 export const UFLRouter = createRouter()
 
-type ApiKeyRequest = {
-	user_id?: string
-	app_id?: string
-}
 
-// API KEY
+// API KEY MANAGEMENT
 UFLRouter.post(
 	'/api-key',
 	defineEventHandler(async (event) => {
-		const res: ApiKeyRequest & { app_name?: string } = await readBody(event)
-
-		if (!res || !res.user_id || !res.app_name || typeof res.user_id !== 'string') {
-			throw createError({
-				status: 400,
-				message: 'No user ID or app name provided or bad format',
-				statusMessage: 'Missing required information',
-			})
-		}
+		const { app, user_id } = await readUploadFastApp(event)
 
 		try {
-			const existingApp = await App.findOne({
-				name: res.app_name,
-				userId: res.user_id
-			})
-
-			if (!existingApp) {
-				throw createError({
-					status: 400,
-					message: 'No app found or you don\'t have permission to access it',
-				})
-			}
-
 			const noOfKeys = await Key.countDocuments({
-				user_id: res.user_id,
-				app_id: existingApp._id
+				user_id: user_id,
+				app_id: app._id
 			})
 
 			if (noOfKeys >= 3) {
@@ -63,7 +40,7 @@ UFLRouter.post(
 
 			const key = generateRandomString({ length: 20, withPrefix: true })
 
-			await Key.create({ value: hashString(key), user_id: res.user_id, app_id: existingApp._id })
+			await Key.create({ value: hashString(key), user_id: user_id, app_id: app._id })
 
 			setResponseStatus(event, 201, 'Created API key successfully')
 			return {
@@ -76,7 +53,7 @@ UFLRouter.post(
 			throw createError({
 				status: 500,
 				message: 'Could not create api key',
-				statusMessage: 'Could not create api key',
+				statusMessage: 'Server Error',
 			})
 		}
 	})
@@ -85,28 +62,29 @@ UFLRouter.post(
 UFLRouter.delete(
 	'/api-key',
 	defineEventHandler(async (event) => {
-		await validateAppMiddleware(event)
-		const app = event.context.app
+		const { app, user_id } = await readUploadFastApp(event)
 		const body = await readBody(event)
 
-		if (!body) {
-			throw createError({
-				status: 400,
-				statusMessage: 'No body found',
-			})
-		}
-
 		try {
-			const { user_id, apiKey } = body
+			const { apiKey } = body
 
-			await Key.findOneAndDelete({
-				value: apiKey,
+			const deletedKey = await Key.findOneAndDelete({
+				value: apiKey.startsWith('ufl') ? hashString(apiKey) : apiKey,
 				user_id,
 				app_id: app._id
 			})
+			if (!deletedKey) {
+				throw new Error('API key not found')
+			}
 
 			return { message: 'API key deleted successfully' }
-		} catch (e) {
+		} catch (e: unknown) {
+			if (e instanceof Error && e.message === 'API key not found') {
+				throw createError({
+					status: 404,
+					statusMessage: 'API key not found',
+				})
+			}
 			throw createError({
 				status: 500,
 				statusMessage: 'Failed to delete key',
@@ -134,7 +112,6 @@ UFLRouter.post(
 	defineEventHandler(async (event) => {
 		await validateAppMiddleware(event)
 		const app = event.context.app as IApp
-		console.log(app)
 		const data = await readFiles(event, { multiples: true })
 
 		try {
@@ -213,27 +190,7 @@ UFLRouter.delete(
 	defineEventHandler(async (event) => {
 		try {
 			await validateAppMiddleware(event)
-			const user = event.context.user._doc
-			const appName = event.headers.get('x-app-name')
-
-			if (!appName) {
-				throw createError({
-					status: 400,
-					statusMessage: 'App name is required',
-				})
-			}
-
-			const app = await App.findOne({
-				name: appName,
-				userId: user._id
-			})
-
-			if (!app) {
-				throw createError({
-					status: 404,
-					statusMessage: 'App not found or unauthorized',
-				})
-			}
+			const app = event.context.app
 
 			const body = await readBody(event)
 
@@ -293,8 +250,6 @@ UFLRouter.post(
 			})
 		}
 
-
-
 		// Validate app name format (alphanumeric, hyphens, underscores)
 		const nameRegex = /^[a-zA-Z0-9-_]+$/
 		if (!nameRegex.test(body.name)) {
@@ -303,8 +258,6 @@ UFLRouter.post(
 				statusMessage: 'App name can only contain letters, numbers, hyphens, and underscores',
 			})
 		}
-
-
 
 		try {
 
@@ -348,7 +301,7 @@ UFLRouter.post(
 				description: body.description || '',
 				userId: user._id,
 				plan: {
-					active: true,
+					active: false,
 					plan_type: 'Trial',
 					paid: false,
 				},
@@ -397,10 +350,18 @@ UFLRouter.post(
 UFLRouter.get(
 	'/app',
 	defineEventHandler(async (event) => {
-		const user = event.context.user._doc
+		const body = await readBody(event)
+		const { user_id } = body
+
+		if (!body || !user_id || typeof user_id !== 'string') {
+			throw createError({
+				status: 400,
+				statusMessage: 'User ID is required and must be a string'
+			})
+		}
 
 		try {
-			const apps = await App.find({ userId: user._id }, {
+			const apps = await App.find({ userId: user_id }, {
 				name: 1,
 				description: 1,
 				'plan.plan_type': 1,
@@ -441,8 +402,7 @@ UFLRouter.get(
 UFLRouter.delete(
 	'/app',
 	defineEventHandler(async (event) => {
-		await validateAppMiddleware(event)
-		const app = event.context.app
+		const { app, user_id } = await readUploadFastApp(event)
 
 		try {
 			// Delete all files associated with this app
