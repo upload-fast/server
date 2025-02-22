@@ -31,6 +31,7 @@ export interface IApp extends Document {
 	updateStorage(sizeChange: number): Promise<void>
 	recalculateStorage(): Promise<void>
 	validateStorageLimit(fileSize: number): Promise<void>
+	switchAppPlan(planType: string): Promise<void>
 }
 
 const AppSchema: Schema = new Schema<IApp>(
@@ -84,6 +85,31 @@ AppSchema.methods.validateStorageLimit = async function (fileSize: number) {
 	await StorageService.validateStorageLimit(this._id, fileSize, this.plan)
 }
 
+AppSchema.methods.switchAppPlan = async function (planType: string) {
+	this.plan.plan_type = planType;
+	this.plan.active = true;
+
+	const GB_IN_KB = 2 ** 20;
+	switch (planType) {
+		case 'Trial':
+			this.plan.storageCap = 5 * GB_IN_KB;
+			this.plan.uploadCap = 500;
+			break;
+		case 'Tier 1':
+			this.plan.storageCap = 15 * GB_IN_KB;
+			this.plan.uploadCap = 5000;
+			break;
+		case 'Tier 2':
+			this.plan.storageCap = 120 * GB_IN_KB;
+			this.plan.uploadCap = 10 ** 3;
+			break;
+		default:
+			this.plan.storageCap = GB_IN_KB;
+			this.plan.uploadCap = 500;
+	}
+	await this.save();
+}
+
 // Add a pre-save hook to ensure storage metrics are valid
 AppSchema.pre('save', function (next) {
 	const metrics = this.get('storageMetrics') as {
@@ -97,6 +123,8 @@ AppSchema.pre('save', function (next) {
 	this.set('storageMetrics', metrics)
 	next()
 })
+
+
 
 const AppModel = () => mongoose.model<IApp>('apps', AppSchema)
 export const App = (mongoose.models['apps'] || AppModel()) as ReturnType<typeof AppModel>

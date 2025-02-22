@@ -17,7 +17,6 @@ import { readUploadFastApp } from '../lib/read-app.js'
 
 export const UFLRouter = createRouter()
 
-
 // API KEY MANAGEMENT
 UFLRouter.post(
 	'/api-key',
