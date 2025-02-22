@@ -5,13 +5,13 @@ let cachedConnection: typeof mongoose | null = null
 export const connectToDb = async () => {
 	try {
 		if (process.env.NODE_ENV !== 'production') {
-			if (cachedConnection && mongoose.connection.readyState === 1) {
+			if ((globalThis as any).cachedConnection && mongoose.connection.readyState === 1) {
 				console.log('Using cached test db connection')
-				return cachedConnection
+				return (globalThis as any).cachedConnection
 			}
-			cachedConnection = await mongoose.connect(process.env.MONGO_URI!, { dbName: 'uploadfast-test' })
+			(globalThis as any).cachedConnection = await mongoose.connect(process.env.MONGO_URI!, { dbName: 'uploadfast-test' })
 			console.log('Connected to test db!')
-			return cachedConnection
+			return (globalThis as any).cachedConnection
 		}
 
 		await mongoose.connect(process.env.MONGO_URI!, { dbName: 'Uploadfast' })
