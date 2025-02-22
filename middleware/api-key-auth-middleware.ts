@@ -23,9 +23,7 @@ export default async function Handler(event: H3Event) {
 			})
 		}
 
-		let existingKey =
-			(await Key.findOne({ value: apikey })) ?? (await Key.findOne({ value: hashString(apikey) }))
-
+		const existingKey = await Key.findOne({ value: apikey.startsWith('ufl_') ? hashString(apikey) : apikey })
 
 		if (!existingKey) {
 			throw createError({
