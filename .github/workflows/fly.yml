@@ -28,7 +28,7 @@ jobs:
 
       - name: Deploy to Fly.io
         run: |
-          flyctl secrets set --stage ACCOUNT_ID=${{ secrets.ACCOUNT_ID }} ACCESS_KEY_ID=${{ secrets.ACCESS_KEY_ID }} SECRET_ACCESS_KEY=${{ secrets.SECRET_ACCESS_KEY }} MONGO_URI=${{ secrets.MONGO_URI }}
+          flyctl secrets set --stage ACCOUNT_ID=${{ secrets.ACCOUNT_ID }} ACCESS_KEY_ID=${{ secrets.ACCESS_KEY_ID }} SECRET_ACCESS_KEY=${{ secrets.SECRET_ACCESS_KEY }} MONGO_URI=${{ secrets.MONGO_URI }} WEBHOOK_SECRET=${{ secrets.WEBHOOK_SECRET }}
           pnpm build
           flyctl deploy --remote-only
         env:
