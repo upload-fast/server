@@ -1,7 +1,8 @@
 import { H3Event, appendCorsHeaders, createError, getRequestHeader } from 'h3'
 import { Key } from '../models/api-keys.js'
 import { User } from '../models/user.js'
-import { hashString } from './hashing.js'
+import { hashString } from '../lib/hash-helpers.js'
+import { App } from '../models/app.js'
 
 export default async function Handler(event: H3Event) {
 	// handle cors
@@ -11,11 +12,10 @@ export default async function Handler(event: H3Event) {
 		methods: '*',
 	})
 
-	const excludedPaths = ['/api-key', '/upgrade']
+	const excludedPaths = ['/api-key', '/app']
 
-	// Don't run this code block if path is in the excludePaths.
 	if (!excludedPaths.includes(event.path)) {
-		const apikey = getRequestHeader(event, 'api-key')
+		const apikey = getRequestHeader(event, 'api-key') || getRequestHeader(event, 'x-api-key')
 		if (!apikey) {
 			throw createError({
 				statusCode: 401,
@@ -23,8 +23,7 @@ export default async function Handler(event: H3Event) {
 			})
 		}
 
-		let existingKey =
-			(await Key.findOne({ value: apikey })) ?? (await Key.findOne({ value: hashString(apikey) }))
+		const existingKey = await Key.findOne({ value: apikey.startsWith('ufl_') ? hashString(apikey) : apikey })
 
 		if (!existingKey) {
 			throw createError({
@@ -33,10 +32,18 @@ export default async function Handler(event: H3Event) {
 			})
 		}
 
-		if (!existingKey.active) {
+		const app = await App.findById(existingKey.app_id).exec()
+		if (!app) {
+			throw createError({
+				statusCode: 404,
+				statusMessage: 'App not found',
+			})
+		}
+
+		if (!app?.plan?.active) {
 			throw createError({
 				statusCode: 401,
-				statusMessage: 'Inactive API key, activate your api key',
+				statusMessage: 'Inactive plan, please activate your plan',
 			})
 		}
 
@@ -46,4 +53,5 @@ export default async function Handler(event: H3Event) {
 			event.context.user = user
 		}
 	}
+
 }

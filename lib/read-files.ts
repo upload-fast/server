@@ -1,4 +1,4 @@
-import { H3Event } from 'h3'
+import { createError, H3Event } from 'h3'
 import type { Options } from 'formidable'
 import formidable from 'formidable'
 import { File } from 'formidable'
@@ -11,22 +11,28 @@ export async function readFiles(
 	event: H3Event,
 	options?: ReadFilesOptions
 ): Promise<{
-	files: File[] | null
+	files: File[]
 	success: boolean
 }> {
 	const form = formidable(options)
 
 	try {
-		const [fields, files] = await form.parse(event.node.req)
+		const [, files] = await form.parse(event.node.req)
 
+		if (!files) {
+			throw createError({
+				statusCode: 404,
+				statusMessage: 'No files found',
+			})
+		}
 		return {
 			success: true,
-			files: files.file ?? null,
+			files: files.file ?? [],
 		}
 	} catch (err) {
-		return {
-			files: null,
-			success: false,
-		}
+		throw createError({
+			statusCode: 500,
+			statusMessage: 'Failed to read files',
+		})
 	}
 }

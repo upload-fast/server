@@ -1,6 +1,6 @@
 import { File } from 'formidable'
 import { PutObjectCommand, PutObjectCommandInput } from '@aws-sdk/client-s3'
-import { S3 } from './s3.js'
+import { R2 } from './s3-client.js'
 import { statSync, unlinkSync, createReadStream } from 'node:fs'
 import { H3Event, setResponseStatus } from 'h3'
 
@@ -34,7 +34,7 @@ export async function UploadToR2({
 		payload: undefined,
 	}
 
-	S3.send(command)
+	R2.send(command)
 		.then(() => {
 			response = { error: false, payload: params.Key }
 			unlinkSync(file.filepath)

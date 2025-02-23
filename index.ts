@@ -1,9 +1,9 @@
 import { createApp } from 'h3'
 import { UFLRouter } from './routes/index.js'
-import Handler from './utils/apiKeyAuth.js'
+import Handler from './middleware/api-key-auth-middleware.js'
 import { createServer } from 'node:http'
 import { toNodeListener } from 'h3'
-import { connectToDb } from './utils/db.js'
+import { connectToDb, disconnectFromDb } from './lib/db.js'
 import 'dotenv/config'
 
 export const app = createApp({
@@ -22,14 +22,19 @@ async function startServer() {
 	} catch (err) {
 		console.error('Failed to connect to the database:', err)
 	}
+	const server = createServer(toNodeListener(app))
 
-	createServer(toNodeListener(app))
+	server
 		.listen(process.env.PORT || 3000)
 		.on('listening', () => console.log(`Running on ${process.env.PORT || 3000}`))
+		.on('close', async () => {
+			await disconnectFromDb()
+			console.log('Server closed, disconnected from database')
+		})
 }
-
 if (process.env.NODE_ENV === 'production') {
 	startServer()
 } else {
+	console.log('Running in development mode')
 	connectToDb()
 }

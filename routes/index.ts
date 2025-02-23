@@ -1,93 +1,96 @@
-import { createError, createRouter, defineEventHandler, readBody, setResponseStatus } from 'h3'
-import { readFiles } from '../utils/readFiles.js'
-import type { ObjectId } from 'mongoose'
-import { Key } from '../models/api-keys.js'
-import { addHashToFileName, generateRandomString, uuid } from '../utils/randomvalue.js'
-import { UploadToR2 } from '../utils/uploadToR2.js'
-import { calcFileSizeInKB } from '../utils/fileSize.js'
-import { UFile } from '../models/file.js'
-import { vars } from '../consts.js'
-import { User } from '../models/user.js'
 import { DeleteObjectCommand, DeleteObjectCommandInput } from '@aws-sdk/client-s3'
-import { S3 } from '../utils/s3.js'
-import { hashString } from '../utils/hashing.js'
+import { createError, createRouter, defineEventHandler, readBody, setResponseStatus } from 'h3'
+import { vars } from '../consts.js'
+import { addHashToFileName, generateRandomString } from '../lib/custom-uuid.js'
+import { calcFileSizeInKB } from '../lib/file-size.js'
+import { hashString } from '../lib/hash-helpers.js'
+import { readFiles } from '../lib/read-files.js'
+import { R2 } from '../lib/s3-client.js'
+import { UploadToR2 } from '../lib/upload-with-s3-client.js'
+import { validateAppMiddleware } from '../middleware/app-validator.js'
+import { Key } from '../models/api-keys.js'
+import { App, IApp } from '../models/app.js'
+import { UFile } from '../models/file.js'
+import { FileValidationService } from '../services/file-validation-service.js'
+import { User } from '../models/user.js'
+import { readUploadFastApp } from '../lib/read-app.js'
+
 export const UFLRouter = createRouter()
 
-type ApiKeyRequest = {
-	user_id?: ObjectId
-}
-
-// API KEY
+// API KEY MANAGEMENT
 UFLRouter.post(
 	'/api-key',
 	defineEventHandler(async (event) => {
-		const res: ApiKeyRequest = await readBody(event)
-
-		if (!res || !res.user_id || typeof res.user_id !== 'string') {
-			throw createError({
-				status: 400,
-				message: 'No user ID provided or bad format',
-				statusMessage: 'No user ID provided or bad format',
-			})
-		}
-
-		const existingUser = await User.findById(res.user_id)
-
-		if (!existingUser) {
-			throw createError({
-				status: 400,
-				message: 'No user found to assign key to',
-			})
-		}
-
-		const noOfKeys = await Key.countDocuments({ user_id: res.user_id })
-
-		if (noOfKeys >= 3) {
-			throw createError({
-				status: 400,
-				message: 'Api Key Limit Exceeded',
-				statusMessage: 'Could not create API key - Limit Exceeded (3)',
-			})
-		}
+		const { app, user_id } = await readUploadFastApp(event)
 
 		try {
-			const key = generateRandomString(20)
+			const noOfKeys = await Key.countDocuments({
+				user_id: user_id,
+				app_id: app._id
+			})
 
-			await Key.create({ value: hashString(key), user_id: existingUser._id })
+			if (noOfKeys >= 3) {
+				throw createError({
+					status: 400,
+					message: 'Api Key Limit Exceeded',
+					statusMessage: 'Could not create API key - Limit Exceeded (3)',
+				})
+			}
+
+			const key = generateRandomString({ length: 20, withPrefix: true })
+
+			await Key.create({ value: hashString(key), user_id: user_id, app_id: app._id })
+
 			setResponseStatus(event, 201, 'Created API key successfully')
 			return {
 				success: true,
 				message: 'Created API key successfully',
 				payload: key,
 			}
+
 		} catch (e) {
 			throw createError({
 				status: 500,
 				message: 'Could not create api key',
-				statusMessage: 'Could not create api key',
+				statusMessage: 'Server Error',
 			})
 		}
 	})
 )
 
-//API KEY DELETE ENDPOINT
-// UFLRouter.delete(
-// 	'/api-key',
-// 	defineEventHandler(async (event) => {
-// 		const body = await readBody(event)
+UFLRouter.delete(
+	'/api-key',
+	defineEventHandler(async (event) => {
+		const { app, user_id } = await readUploadFastApp(event)
+		const body = await readBody(event)
 
-// 		if (!body) {
-// 			throw createError({
-// 				status: 400,
-// 				statusMessage: 'No body found',
-// 			})
-// 		}
+		try {
+			const { apiKey } = body
 
-// 		const { user_id, apiKey } = body
+			const deletedKey = await Key.findOneAndDelete({
+				value: apiKey.startsWith('ufl') ? hashString(apiKey) : apiKey,
+				user_id,
+				app_id: app._id
+			})
+			if (!deletedKey) {
+				throw new Error('API key not found')
+			}
 
-// 		const key = Key.findOneAndDelete({})
-// 	})
-// )
+			return { message: 'API key deleted successfully' }
+		} catch (e: unknown) {
+			if (e instanceof Error && e.message === 'API key not found') {
+				throw createError({
+					status: 404,
+					statusMessage: 'API key not found',
+				})
+			}
+			throw createError({
+				status: 500,
+				statusMessage: 'Failed to delete key',
+			})
+		}
+	})
+)
 
 // UPLOAD
 UFLRouter.get(
@@ -106,86 +109,76 @@ UFLRouter.get(
 UFLRouter.post(
 	'/upload',
 	defineEventHandler(async (event) => {
+		await validateAppMiddleware(event)
+		const app = event.context.app as IApp
 		const data = await readFiles(event, { multiples: true })
 
-		if (!data.files) {
-			setResponseStatus(event, 404, 'No files found')
-			return `No files to upload!`
-		} else {
-			try {
-				// Get user from context
-				const user = event.context.user._doc
-
-				// Check if plan has been exceeded. Add some slight ojoro.
-				if (user!.plan!.storageUsed > user!.plan!.storageCap + 1024) {
-					throw createError({
-						statusCode: 403,
-						statusText: 'You have exceeded your storage limits',
-						statusMessage: 'You have exceeded your storage limits',
-					})
-				}
-
-				const noOfFiles = await UFile.countDocuments({ plan_id: user.plan._id })
-
-				if (noOfFiles > user!.plan!.uploadCap) {
-					throw createError({
-						statusCode: 403,
-						statusText: 'You have exceeded your storage cap',
-						statusMessage: 'Storage cap depleted.',
-					})
-				}
-
-				// Go ahead and upload files.
-				const uploadResponse = await Promise.all(
-					data.files.map(async (file) => {
-						const { mimetype, originalFilename, size } = file
-						const isImage = file.mimetype?.startsWith('image/')!
-
-						const fileHash = uuid({ length: 4, withPrefix: false })
-
-						const fileKey = addHashToFileName(originalFilename!, fileHash)
-						const fileUrl = encodeURI(vars.R2URL + `/${fileKey}`)
-
-						await UploadToR2({ file, fileKey, isImage, bucket: 'root', event })
-
-						const file_size = calcFileSizeInKB(size)
-
-						await UFile.create({
-							file_name: fileKey,
-							file_size,
-							file_type: mimetype,
-							bucket: 'root',
-							url: fileUrl,
-							// @ts-ignore
-							plan_id: user?.plan?._id,
-						})
-
-						// Pulling current user ID from context
-						const userId = user._id
-
-						// We need to fetch so we can update - for some reason findByIdAndUpdate directly didn't work.
-						const userToUpdate = await User.findByIdAndUpdate(userId)
-
-						// Update storage level on embedded plan document in user
-						userToUpdate!.plan!.storageUsed! = userToUpdate!.plan!.storageUsed! + file_size
-
-						await userToUpdate?.save()
-
-						return {
-							file_name: fileKey,
-							file_size,
-							file_type: mimetype,
-							bucket: 'root',
-							url: fileUrl,
-						}
-					})
+		try {
+			// Validate all files before processing any of them
+			await Promise.all(
+				data.files.map(file =>
+					FileValidationService.validateFile(file, app.plan.plan_type as 'Trial' | 'Tier 1' | 'Tier 2')
 				)
-				// Final response
-				setResponseStatus(event, 200, 'Files Uploaded')
-				return uploadResponse
-			} catch (e: any) {
-				setResponseStatus(event, 500, 'Error uploading files')
-				return { payload: e.message, message: 'Error uploading files' }
+			)
+
+			// Validate total storage for all files
+			const totalUploadSize = data.files.reduce((sum, file) =>
+				sum + calcFileSizeInKB(file.size!), 0
+			)
+
+			// Check storage limit for the entire batch
+			await app.validateStorageLimit(totalUploadSize)
+
+			const uploadResponse = await Promise.all(
+				data.files.map(async (file) => {
+					const { mimetype, originalFilename, size } = file
+					const isImage = mimetype?.startsWith('image/')!
+
+					const fileHash = generateRandomString({ length: 4, withPrefix: false })
+					const fileKey = addHashToFileName(originalFilename!, fileHash)
+					const fileUrl = encodeURI(vars.R2URL + `/${fileKey}`)
+
+					await UploadToR2({ file, fileKey, isImage, bucket: 'root', event })
+
+					const fileSize = calcFileSizeInKB(size!)
+
+					// Create file record and update storage metrics
+					await Promise.all([
+						UFile.create({
+							name: fileKey,
+							size: fileSize,
+							type: mimetype,
+							bucket: 'root',
+							url: fileUrl,
+							app_id: app?._id || (() => {
+								throw createError({
+									status: 500,
+									statusMessage: 'Invalid app ID - app context is missing'
+								})
+							})()
+						}),
+						app.updateStorage(fileSize)
+					])
+					return {
+						file_name: fileKey,
+						file_size: fileSize,
+						file_type: mimetype,
+						bucket: 'root',
+						url: fileUrl,
+					}
+				})
+			)
+
+			setResponseStatus(event, 200, 'Files Uploaded')
+			return uploadResponse
+
+		} catch (e: any) {
+			// Clean up any partially uploaded files if needed
+			setResponseStatus(event, e.status || 500, e.statusMessage || 'Error uploading files')
+			return {
+				error: true,
+				message: e.statusMessage || 'Error uploading files',
+				details: e.message
 			}
 		}
 	})
@@ -195,7 +188,8 @@ UFLRouter.delete(
 	'/delete',
 	defineEventHandler(async (event) => {
 		try {
-			const user = event.context.user._doc
+			await validateAppMiddleware(event)
+			const app = event.context.app
 
 			const body = await readBody(event)
 
@@ -203,42 +197,32 @@ UFLRouter.delete(
 				throw createError({
 					status: 400,
 					statusMessage: 'No URL provided in body',
-					statusText: 'No url found',
 				})
 			}
 
-			const file_url = body.file_url
-
-			const file = await UFile.findOne({ url: file_url })
+			const file = await UFile.findOne({
+				url: body.file_url,
+				app_id: app._id
+			})
 
 			if (!file) {
 				throw createError({
-					status: 400,
-					statusMessage: 'That file is not in your records.',
-					statusText: 'Resource not found',
+					status: 404,
+					statusMessage: 'File not found in this app',
 				})
 			}
 
-			if (file!.plan_id!.toString() !== user.plan._id.toString()) {
-				setResponseStatus(event, 403)
-				return {
-					message: 'You do not have permission to delete this file',
-				}
-			}
-
+			// Delete file from storage
 			const params: DeleteObjectCommandInput = {
 				Bucket: 'root',
 				Key: file.file_name!,
 			}
 
 			const command = new DeleteObjectCommand(params)
-			await S3.send(command)
-			await UFile.findByIdAndDelete(file._id)
-			const planUser = await User.findById(user._id)
-
-			planUser!.plan!.storageUsed = planUser!.plan!.storageUsed! - file.file_size!
-
-			await planUser?.save()
+			await R2.send(command)
+			await UFile.findByIdAndDelete(file._id).exec()
+			// Update storage metrics
+			await app.updateStorage(-file.file_size!)
 
 			setResponseStatus(event, 200)
 			return { message: 'File deleted successfully' }
@@ -251,12 +235,204 @@ UFLRouter.delete(
 	})
 )
 
-// UFLRouter.get(
-// 	'/',
-// 	defineEventHandler((event) => {
-// 		if (event.context.user) {
-// 			return event.context.user._doc.plan._id.toString()
-// 		}
-// 		return 'Bye'
-// 	})
-// )
+// APP MANAGEMENT
+UFLRouter.post(
+	'/app',
+	defineEventHandler(async (event) => {
+		const body = await readBody(event)
+
+		// Validate request body
+		if (!body || !body.name || typeof body.name !== 'string') {
+			throw createError({
+				status: 400,
+				statusMessage: 'App name is required and must be a string',
+			})
+		}
+
+		// Validate app name format (alphanumeric, hyphens, underscores)
+		const nameRegex = /^[a-zA-Z0-9-_]+$/
+		if (!nameRegex.test(body.name)) {
+			throw createError({
+				status: 400,
+				statusMessage: 'App name can only contain letters, numbers, hyphens, and underscores',
+			})
+		}
+
+		try {
+
+			const user = await User.findById(body.user_id).exec()
+
+			if (!user) {
+				throw createError({
+					status: 404,
+					statusMessage: 'User not found',
+				})
+			}
+
+			// Check if app name already exists for this user
+			const existingApp = await App.findOne({
+				name: body.name,
+				userId: user._id
+			})
+
+			if (existingApp) {
+				throw createError({
+					status: 400,
+					statusMessage: 'An app with this name already exists',
+				})
+			}
+
+			// Check user's app limit (e.g., 5 apps for free tier)
+			const userAppsCount = await App.countDocuments({
+				userId: user._id
+			})
+
+			if (userAppsCount >= 5) {
+				throw createError({
+					status: 403,
+					statusMessage: 'You have reached the maximum number of apps allowed (5)',
+				})
+			}
+
+			// Create new app with default Trial plan
+			const newApp = await App.create({
+				name: body.name,
+				description: body.description || '',
+				userId: user._id,
+				plan: {
+					active: false,
+					plan_type: 'Trial',
+					paid: false,
+				},
+				storageMetrics: {
+					totalUsed: 0,
+					filesCount: 0,
+					monthlyUploads: 0,
+					lastCalculated: new Date()
+				}
+			})
+
+			setResponseStatus(event, 201)
+			return {
+				message: 'App created successfully',
+				app: {
+					id: newApp._id,
+					name: newApp.name,
+					description: newApp.description,
+					plan: {
+						type: newApp.plan.plan_type,
+						storageCap: newApp.plan.storageCap,
+						uploadCap: newApp.plan.uploadCap
+					},
+					created_at: newApp.createdAt
+				}
+			}
+
+		} catch (e: any) {
+			// Check if error is from Mongoose unique constraint
+			if (e.code === 11000) {
+				throw createError({
+					status: 400,
+					statusMessage: 'An app with this name already exists',
+				})
+			}
+
+			throw createError({
+				status: 500,
+				statusMessage: 'Failed to create app - ' + e.message,
+			})
+		}
+	})
+)
+
+// Get user's apps
+UFLRouter.get(
+	'/app',
+	defineEventHandler(async (event) => {
+		const body = await readBody(event)
+		const { user_id } = body
+
+		if (!body || !user_id || typeof user_id !== 'string') {
+			throw createError({
+				status: 400,
+				statusMessage: 'User ID is required and must be a string'
+			})
+		}
+
+		try {
+			const apps = await App.find({ userId: user_id }, {
+				name: 1,
+				description: 1,
+				'plan.plan_type': 1,
+				'plan.storageCap': 1,
+				'plan.uploadCap': 1,
+				storageMetrics: 1,
+				createdAt: 1
+			}).sort({ createdAt: -1 })
+
+			return {
+				apps: apps.map((app: { _id: any; name: any; description: any; plan: { plan_type: any; storageCap: any; uploadCap: any }; storageMetrics: { totalUsed: any; filesCount: any; monthlyUploads: any }; createdAt: any }) => ({
+					id: app._id,
+					name: app.name,
+					description: app.description,
+					plan: {
+						type: app.plan.plan_type,
+						storageCap: app.plan.storageCap,
+						uploadCap: app.plan.uploadCap
+					},
+					storage: {
+						used: app.storageMetrics.totalUsed,
+						filesCount: app.storageMetrics.filesCount,
+						monthlyUploads: app.storageMetrics.monthlyUploads
+					},
+					created_at: app.createdAt
+				}))
+			}
+		} catch (e: any) {
+			throw createError({
+				status: 500,
+				statusMessage: 'Failed to fetch apps - ' + e.message,
+			})
+		}
+	})
+)
+
+// Delete app
+UFLRouter.delete(
+	'/app',
+	defineEventHandler(async (event) => {
+		const { app, user_id } = await readUploadFastApp(event)
+
+		try {
+			// Delete all files associated with this app
+			const files = await UFile.find({ app_id: app._id })
+
+			// Delete files from storage
+			await Promise.all(files.map(async (file) => {
+				const params: DeleteObjectCommandInput = {
+					Bucket: 'root',
+					Key: file.file_name!,
+				}
+				const command = new DeleteObjectCommand(params)
+				await R2.send(command)
+			}))
+
+			// Delete all records
+			await Promise.all([
+				UFile.deleteMany({ app_id: app._id }),
+				Key.deleteMany({ app_id: app._id }),
+				App.findByIdAndDelete(app._id)
+			])
+
+			return {
+				message: 'App and all associated data deleted successfully'
+			}
+		} catch (e: any) {
+			throw createError({
+				status: 500,
+				statusMessage: 'Failed to delete app - ' + e.message,
+			})
+		}
+	})
+)
+
