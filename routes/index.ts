@@ -1,19 +1,18 @@
 import { DeleteObjectCommand, DeleteObjectCommandInput } from '@aws-sdk/client-s3'
-import { createError, createRouter, defineEventHandler, readBody, setResponseStatus } from 'h3'
+import { createError, createRouter, defineEventHandler, getRouterParams, readBody, setResponseStatus } from 'h3'
 import { vars } from '../consts.js'
 import { addHashToFileName, generateRandomString } from '../lib/custom-uuid.js'
 import { calcFileSizeInKB } from '../lib/file-size.js'
 import { hashString } from '../lib/hash-helpers.js'
+import { readUploadFastApp } from '../lib/read-app.js'
 import { readFiles } from '../lib/read-files.js'
 import { R2 } from '../lib/s3-client.js'
 import { UploadToR2 } from '../lib/upload-with-s3-client.js'
-import { validateAppMiddleware } from '../middleware/app-validator.js'
 import { Key } from '../models/api-keys.js'
 import { App, IApp } from '../models/app.js'
 import { UFile } from '../models/file.js'
-import { FileValidationService } from '../services/file-validation-service.js'
 import { User } from '../models/user.js'
-import { readUploadFastApp } from '../lib/read-app.js'
+import { FileValidationService } from '../services/file-validation-service.js'
 
 export const UFLRouter = createRouter()
 
@@ -92,24 +91,11 @@ UFLRouter.delete(
 	})
 )
 
-// UPLOAD
-UFLRouter.get(
-	'/upload',
-	defineEventHandler(() => {
-		return `
-        <html>
-        <body>
-        <form method="POST" encType="multipart/form-data"> <input type="file" name="file" multiple /> <button type="submit">Submit file</button> <form/>
-        <body />
-        <html/>
-        `
-	})
-)
+
 
 UFLRouter.post(
-	'/upload',
+	'/file',
 	defineEventHandler(async (event) => {
-		await validateAppMiddleware(event)
 		const app = event.context.app as IApp
 		const data = await readFiles(event, { multiples: true })
 
@@ -145,9 +131,9 @@ UFLRouter.post(
 					// Create file record and update storage metrics
 					await Promise.all([
 						UFile.create({
-							name: fileKey,
-							size: fileSize,
-							type: mimetype,
+							file_name: fileKey,
+							file_size: fileSize,
+							file_type: mimetype,
 							bucket: 'root',
 							url: fileUrl,
 							app_id: app?._id || (() => {
@@ -185,10 +171,9 @@ UFLRouter.post(
 )
 
 UFLRouter.delete(
-	'/delete',
+	'/file',
 	defineEventHandler(async (event) => {
 		try {
-			await validateAppMiddleware(event)
 			const app = event.context.app
 
 			const body = await readBody(event)
@@ -204,6 +189,8 @@ UFLRouter.delete(
 				url: body.file_url,
 				app_id: app._id
 			})
+
+			console.log(file)
 
 			if (!file) {
 				throw createError({
@@ -227,10 +214,7 @@ UFLRouter.delete(
 			setResponseStatus(event, 200)
 			return { message: 'File deleted successfully' }
 		} catch (e: any) {
-			throw createError({
-				status: 500,
-				statusMessage: 'Failed to delete file - ' + e.message,
-			})
+			throw e
 		}
 	})
 )
@@ -436,3 +420,22 @@ UFLRouter.delete(
 	})
 )
 
+UFLRouter.get(
+	'/app/:id/files',
+	defineEventHandler(async (event) => {
+		const { id } = getRouterParams(event)
+
+		const app = await App.findById(id)
+
+		if (!app) {
+			throw createError({
+				status: 404,
+				statusMessage: 'App not found',
+			})
+		}
+
+		const files = await UFile.find({ app_id: app._id })
+
+		return files
+	})
+)

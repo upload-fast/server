@@ -16,7 +16,7 @@ export class FileValidationService {
     ])
 
     private static maxFileSizeInMB = {
-        'Trial': 500,
+        'Trial': 512,
         'Tier 1': 1024,
         'Tier 2': 5120
     }
