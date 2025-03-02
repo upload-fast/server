@@ -31,4 +31,5 @@ const SessionSchema = new Schema<ISession>(
 // Index to automatically expire sessions
 SessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export default mongoose.model<ISession>('Session', SessionSchema); 
+const SessionModel = () => mongoose.model<ISession>('sessions', SessionSchema)
+export const Session = (mongoose.models['sessions'] || SessionModel()) as ReturnType<typeof SessionModel>
