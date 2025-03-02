@@ -9,9 +9,10 @@ import { UploadToR2 } from '../lib/upload-with-s3-client.js'
 import { IApp } from '../models/app.js'
 import { UFile } from '../models/file.js'
 import { FileValidationService } from '../services/file-validation-service.js'
-
+import authRouter from './auth.js'
 export const UFLRouter = createRouter()
 
+UFLRouter.use('/api/auth/**', authRouter.handler)
 // UPLOAD FILES
 UFLRouter.post(
 	'/file',

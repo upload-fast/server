@@ -4,7 +4,7 @@ import { Session } from '../models/Session.js';
 import mongoose from 'mongoose';
 import { generateRandomString } from '../lib/custom-uuid.js';
 
-const router = createRouter();
+const authRouter = createRouter();
 
 // Configuration
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
@@ -72,7 +72,7 @@ async function deleteSession(sessionId: string): Promise<boolean> {
 }
 
 // Initiate GitHub OAuth flow
-router.get('/login', defineEventHandler(async (event) => {
+authRouter.get('/login', defineEventHandler(async (event) => {
     
     const query = getQuery(event);
     const callbackUrl = query.callbackUrl || `https://${FRONTEND_DOMAIN}/auth/callback`;
@@ -84,7 +84,7 @@ router.get('/login', defineEventHandler(async (event) => {
 }));
 
 // GitHub OAuth callback
-router.get('/callback', defineEventHandler(async (event) => {
+authRouter.get('/callback', defineEventHandler(async (event) => {
     const query = getQuery(event);
     const code = query.code as string;
     const state = query.state as string;
@@ -190,7 +190,7 @@ router.get('/callback', defineEventHandler(async (event) => {
 }));
 
 // Get current user
-router.get('/me', defineEventHandler(async (event) => {
+authRouter.get('/me', defineEventHandler(async (event) => {
     const sessionId = getCookie(event, SESSION_COOKIE_NAME);
 
     if (!sessionId) {
@@ -228,7 +228,7 @@ router.get('/me', defineEventHandler(async (event) => {
 }));
 
 // Logout
-router.post('/logout', defineEventHandler(async (event) => {
+authRouter.post('/logout', defineEventHandler(async (event) => {
     const sessionId = getCookie(event, SESSION_COOKIE_NAME);
 
     if (sessionId) {
@@ -241,7 +241,7 @@ router.post('/logout', defineEventHandler(async (event) => {
 }));
 
 // Logout from all devices
-router.post('/logout-all', defineEventHandler(async (event) => {
+authRouter.post('/logout-all', defineEventHandler(async (event) => {
     const sessionId = getCookie(event, SESSION_COOKIE_NAME);
 
     if (!sessionId) {
@@ -269,4 +269,4 @@ router.post('/logout-all', defineEventHandler(async (event) => {
     }
 }));
 
-export default router;
+export default authRouter;
