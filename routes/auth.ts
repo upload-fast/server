@@ -1,6 +1,6 @@
 import { createRouter, defineEventHandler, getQuery, setCookie, getCookie, deleteCookie, sendRedirect, createError } from 'h3';
 import { User } from '../models/user.js';
-import { Session } from '../models/Session.js';
+import { Session } from '../models/session.js';
 import mongoose from 'mongoose';
 import { generateRandomString } from '../lib/custom-uuid.js';
 
@@ -11,18 +11,6 @@ const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 const FRONTEND_DOMAIN = process.env.FRONTEND_DOMAIN;
 const BACKEND_URL = process.env.BACKEND_URL;
-// Validate required environment variables
-const requiredEnvVars = {
-    GITHUB_CLIENT_ID,
-    GITHUB_CLIENT_SECRET,
-    FRONTEND_DOMAIN,
-    BACKEND_URL
-};
-
-// Check all required environment variables in one loop
-Object.entries(requiredEnvVars).forEach(([name, value]) => {
-    if (!value) throw new Error(`${name} environment variable is not set`);
-});
 
 // Set redirect URI after validation
 const REDIRECT_URI = `${BACKEND_URL}/api/auth/callback`;

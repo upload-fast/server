@@ -19,7 +19,7 @@ export async function readFiles(
 	try {
 		const [, files] = await form.parse(event.node.req)
 
-		if (!files) {
+		if (!files.length) {
 			throw createError({
 				statusCode: 404,
 				statusMessage: 'No files found',
@@ -27,12 +27,9 @@ export async function readFiles(
 		}
 		return {
 			success: true,
-			files: files.file ?? [],
+			files: files.file!,
 		}
 	} catch (err) {
-		throw createError({
-			statusCode: 500,
-			statusMessage: 'Failed to read files',
-		})
+		throw err
 	}
 }

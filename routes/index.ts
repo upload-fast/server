@@ -19,6 +19,7 @@ UFLRouter.post(
 	defineEventHandler(async (event) => {
 		const app = event.context.app as IApp
 		const data = await readFiles(event, { multiples: true })
+		console.log(data)
 
 		try {
 			// Validate all files before processing any of them
