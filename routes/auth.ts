@@ -29,7 +29,7 @@ const getCookieOptions = () => ({
 
 // Helper to create a new session
 async function createSession(userId: mongoose.Types.ObjectId): Promise<string> {
-    const sessionId = generateRandomString({ length: 32 });
+    const sessionId = generateRandomString({ length: 32, withPrefix: false });
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + SESSION_DURATION_DAYS);
 

@@ -9,13 +9,15 @@ export const bento = new BentoCache({
     },
 })
 
-bento.on('cache:hit', ({ key, value, store }) => {
-    console.log(`cache:hit: ${key}, value ${value}, store ${store}`)
-})
+if (process.env.NODE_ENV === 'development') {
+    bento.on('cache:hit', ({ key, value, store }) => {
+        console.log(`cache:hit: ${key}, value ${value}, store ${store}`)
+    })
 
-bento.on('cache:miss', ({ key, store }) => {
-    console.log(`cache:miss: ${key}, store ${store}`)
-})
+    bento.on('cache:miss', ({ key, store }) => {
+        console.log(`cache:miss: ${key}, store ${store}`)
+    })
+}
 
 export const UserCache = bento.namespace('users')
 export const AppCache = bento.namespace('apps')

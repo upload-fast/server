@@ -15,7 +15,8 @@ export default async function Handler(event: H3Event) {
 
 	const excludedPaths = ['/api-key', '/app', '/api/auth']
 
-	if (!excludedPaths.includes(event.path)) {
+	// Check if the path starts with any of the excluded paths
+	if (!excludedPaths.some(path => event.path.startsWith(path))) {
 		const apikey = getRequestHeader(event, 'api-key') || getRequestHeader(event, 'x-api-key')
 		if (!apikey) {
 			throw createError({
