@@ -61,7 +61,7 @@ async function deleteSession(sessionId: string): Promise<boolean> {
 
 // Initiate GitHub OAuth flow
 authRouter.get('/login', defineEventHandler(async (event) => {
-    
+
     const query = getQuery(event);
     const callbackUrl = query.callbackUrl || `https://${FRONTEND_DOMAIN}/auth/callback`;
 
@@ -182,6 +182,7 @@ authRouter.get('/me', defineEventHandler(async (event) => {
     const sessionId = getCookie(event, SESSION_COOKIE_NAME);
 
     if (!sessionId) {
+
         return { authenticated: false };
     }
 
@@ -193,7 +194,7 @@ authRouter.get('/me', defineEventHandler(async (event) => {
     }
 
     try {
-        const user = await User.findById(userId).select('-accessToken -refreshToken');
+        const user = await User.findById(userId, { accessToken: 0, refreshToken: 0 });
 
         if (!user) {
             deleteCookie(event, SESSION_COOKIE_NAME, getCookieOptions());

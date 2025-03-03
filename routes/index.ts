@@ -1,5 +1,5 @@
 import { DeleteObjectCommand, DeleteObjectCommandInput } from '@aws-sdk/client-s3'
-import { createError, createRouter, defineEventHandler, readBody, setResponseStatus } from 'h3'
+import { createError, createRouter, defineEventHandler, readBody, setResponseStatus, useBase } from 'h3'
 import { vars } from '../consts.js'
 import { addHashToFileName, generateRandomString } from '../lib/custom-uuid.js'
 import { calcFileSizeInKB } from '../lib/file-size.js'
@@ -12,7 +12,8 @@ import { FileValidationService } from '../services/file-validation-service.js'
 import authRouter from './auth.js'
 export const UFLRouter = createRouter()
 
-UFLRouter.use('/api/auth/**', authRouter.handler)
+UFLRouter.use('/api/auth/**', useBase("/api/auth", authRouter.handler))
+
 // UPLOAD FILES
 UFLRouter.post(
 	'/file',
