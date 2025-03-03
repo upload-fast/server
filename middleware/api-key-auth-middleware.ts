@@ -13,7 +13,7 @@ export default async function Handler(event: H3Event) {
 		methods: '*',
 	})
 
-	const excludedPaths = ['/api-key', '/app']
+	const excludedPaths = ['/api-key', '/app', '/api/auth']
 
 	if (!excludedPaths.includes(event.path)) {
 		const apikey = getRequestHeader(event, 'api-key') || getRequestHeader(event, 'x-api-key')

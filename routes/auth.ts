@@ -1,4 +1,4 @@
-import { createRouter, defineEventHandler, getQuery, setCookie, getCookie, deleteCookie, sendRedirect, createError } from 'h3';
+import { createRouter, defineEventHandler, getQuery, setCookie, getCookie, deleteCookie, sendRedirect, createError, setResponseStatus } from 'h3';
 import { User } from '../models/user.js';
 import { Session } from '../models/session.js';
 import mongoose from 'mongoose';
@@ -182,7 +182,7 @@ authRouter.get('/me', defineEventHandler(async (event) => {
     const sessionId = getCookie(event, SESSION_COOKIE_NAME);
 
     if (!sessionId) {
-
+        setResponseStatus(event, 401)
         return { authenticated: false };
     }
 
@@ -211,6 +211,7 @@ authRouter.get('/me', defineEventHandler(async (event) => {
             },
         };
     } catch (error) {
+        setResponseStatus(event, 500)
         console.error('Error fetching user:', error);
         return { authenticated: false };
     }
