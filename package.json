@@ -16,12 +16,17 @@
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.629.0",
 		"@aws-sdk/lib-storage": "^3.629.0",
+		"@types/bcrypt": "^5.0.2",
+		"@types/nodemailer": "^6.4.17",
+		"@vinejs/vine": "^3.0.1",
+		"bcrypt": "^5.1.1",
 		"bentocache": "^1.2.1",
 		"dotenv": "^16.4.5",
 		"formidable": "^3.5.1",
 		"h3": "^1.11.1",
 		"listhen": "^1.7.2",
-		"mongoose": "^8.3.1"
+		"mongoose": "^8.3.1",
+		"nodemailer": "^6.10.1"
 	},
 	"devDependencies": {
 		"@aws-sdk/types": "^3.609.0",
