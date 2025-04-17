@@ -16,8 +16,6 @@
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.629.0",
 		"@aws-sdk/lib-storage": "^3.629.0",
-		"@types/bcrypt": "^5.0.2",
-		"@types/nodemailer": "^6.4.17",
 		"@vinejs/vine": "^3.0.1",
 		"bcrypt": "^5.1.1",
 		"bentocache": "^1.2.1",
@@ -31,7 +29,9 @@
 	"devDependencies": {
 		"@aws-sdk/types": "^3.609.0",
 		"@flydotio/dockerfile": "^0.5.7",
+		"@types/bcrypt": "^5.0.2",
 		"@types/formidable": "^3.4.5",
+		"@types/nodemailer": "^6.4.17",
 		"env-cmd": "^10.1.0",
 		"jiti": "^1.21.6",
 		"tsup": "^8.0.2",

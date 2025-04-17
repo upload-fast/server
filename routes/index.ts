@@ -10,6 +10,7 @@ import { IApp } from '../models/app.js'
 import { UFile } from '../models/file.js'
 import { FileValidationService } from '../services/file-validation-service.js'
 import authRouter from './auth.js'
+
 export const UFLRouter = createRouter()
 
 UFLRouter.use('/api/auth/**', useBase("/api/auth", authRouter.handler))

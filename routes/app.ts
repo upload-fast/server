@@ -1,40 +1,29 @@
-import { defineEventHandler, getRouterParams, setResponseStatus } from "h3"
-import { readBody } from "h3"
-import { createError } from "h3"
-import { App } from "../models/app.js"
-import { UFLRouter } from "./index.js"
-import { DeleteObjectCommandInput, DeleteObjectCommand } from "@aws-sdk/client-s3"
+import { DeleteObjectCommand, DeleteObjectCommandInput } from "@aws-sdk/client-s3"
+import vine, { errors } from "@vinejs/vine"
+import { createError, defineEventHandler, getRouterParams, readBody, setResponseStatus } from "h3"
 import { readUploadFastApp } from "../lib/read-app.js"
 import { R2 } from "../lib/s3-client.js"
 import { Key } from "../models/api-keys.js"
+import { App } from "../models/app.js"
 import { UFile } from "../models/file.js"
 import { User } from "../models/user.js"
+import { UFLRouter } from "./index.js"
+import { Infer } from "@vinejs/vine/types"
+
+const createAppEndpointBodySchema = vine.object({
+    name: vine.string().minLength(1).maxLength(100),
+    description: vine.string().maxLength(255).nullable(),
+    user_id: vine.string(),
+    plan: vine.string().nullable(),
+})
 
 // CREATE A NEW APP
 UFLRouter.post(
     '/app',
     defineEventHandler(async (event) => {
-        const body = await readBody(event)
-
-        // Validate request body
-        if (!body || !body.name || typeof body.name !== 'string') {
-            throw createError({
-                status: 400,
-                statusMessage: 'App name is required and must be a string',
-            })
-        }
-
-        // Validate app name format (alphanumeric, hyphens, underscores)
-        const nameRegex = /^[a-zA-Z0-9-_]+$/
-        if (!nameRegex.test(body.name)) {
-            throw createError({
-                status: 400,
-                statusMessage: 'App name can only contain letters, numbers, hyphens, and underscores',
-            })
-        }
-
+        const body: Infer<typeof createAppEndpointBodySchema> = await readBody(event)
         try {
-
+            await vine.validate({ schema: createAppEndpointBodySchema, data: body })
             const user = await User.findById(body.user_id).exec()
 
             if (!user) {
@@ -57,7 +46,6 @@ UFLRouter.post(
                 })
             }
 
-            // Check user's app limit (e.g., 5 apps for free tier)
             const userAppsCount = await App.countDocuments({
                 userId: user._id
             })
@@ -104,6 +92,12 @@ UFLRouter.post(
             }
 
         } catch (e: any) {
+            if (e instanceof errors.E_VALIDATION_ERROR) {
+                throw createError({
+                    status: 400,
+                    statusMessage: "Validation error on request body",
+                })
+            }
             // Check if error is from Mongoose unique constraint
             if (e.code === 11000) {
                 throw createError({
