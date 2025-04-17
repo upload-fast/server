@@ -1,8 +1,10 @@
-import { createRouter, defineEventHandler, getQuery, setCookie, getCookie, deleteCookie, sendRedirect, createError, setResponseStatus } from 'h3';
+import { createRouter, defineEventHandler, getQuery, setCookie, getCookie, deleteCookie, sendRedirect, createError, setResponseStatus, readBody } from 'h3';
 import { User } from '../models/user.js';
 import { Session } from '../models/session.js';
 import mongoose from 'mongoose';
 import { generateRandomString } from '../lib/custom-uuid.js';
+import { AuthService } from '../services/auth-service.js';
+import vine, { errors } from "@vinejs/vine";
 
 const authRouter = createRouter();
 
@@ -22,46 +24,183 @@ const getCookieOptions = () => ({
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
-    maxAge: 60 * 60 * 24 * SESSION_DURATION_DAYS, // 7 days in seconds
+    maxAge: 60 * 60 * 24 * SESSION_DURATION_DAYS, // 35 days in seconds
     domain: `.${FRONTEND_DOMAIN}`, // Note the dot prefix to include all subdomains
     path: '/',
 });
 
-// Helper to create a new session
-async function createSession(userId: mongoose.Types.ObjectId): Promise<string> {
-    const sessionId = generateRandomString({ length: 32, withPrefix: false });
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + SESSION_DURATION_DAYS);
+// Validation schemas
+const registerSchema = vine.object({
+    email: vine.string().email(),
+    password: vine.string().minLength(8).maxLength(100),
+    name: vine.string().minLength(2).maxLength(100),
+});
 
-    await Session.create({
-        userId,
-        sessionId,
-        expiresAt,
-    });
+const loginSchema = vine.object({
+    email: vine.string().email(),
+    password: vine.string(),
+});
 
-    return sessionId;
-}
+const resetPasswordSchema = vine.object({
+    token: vine.string(),
+    password: vine.string().minLength(8).maxLength(100),
+});
 
-// Helper to validate a session
-async function validateSession(sessionId: string): Promise<mongoose.Types.ObjectId | null> {
-    const session = await Session.findOne({ sessionId });
-    if (!session) return null;
-    return session.userId;
-}
+const requestResetSchema = vine.object({
+    email: vine.string().email(),
+});
 
-// Helper to delete a session
-async function deleteSession(sessionId: string): Promise<boolean> {
+// Email & Password Registration
+authRouter.post('/register', defineEventHandler(async (event) => {
     try {
-        await Session.deleteOne({ sessionId });
-        return true;
+        const body = await readBody(event);
+        await vine.validate({ schema: registerSchema, data: body });
+
+        const { user, sessionId } = await AuthService.registerUser({
+            email: body.email,
+            password: body.password,
+            name: body.name,
+        });
+
+        // Set session cookie
+        setCookie(event, SESSION_COOKIE_NAME, sessionId, getCookieOptions());
+
+
+        setResponseStatus(event, 201);
+        return {
+            success: true,
+            user,
+            message: 'Registration successful. Please verify your email.',
+        };
     } catch (error) {
-        return false;
+        if (error instanceof errors.E_VALIDATION_ERROR) {
+            throw createError({
+                statusCode: 400,
+                statusMessage: 'Validation error',
+                data: error.messages,
+            });
+        }
+        throw error;
     }
-}
+}));
 
-// Initiate GitHub OAuth flow
-authRouter.get('/login', defineEventHandler(async (event) => {
+// Email & Password Login
+authRouter.post('/login', defineEventHandler(async (event) => {
+    try {
+        const body = await readBody(event);
+        await vine.validate({ schema: loginSchema, data: body });
 
+        const { user, sessionId } = await AuthService.loginWithEmailPassword(
+            body.email,
+            body.password
+        );
+
+        // Set session cookie
+        setCookie(event, SESSION_COOKIE_NAME, sessionId, getCookieOptions());
+
+        return {
+            success: true,
+            user,
+        };
+    } catch (error) {
+        if (error instanceof errors.E_VALIDATION_ERROR) {
+            throw createError({
+                statusCode: 400,
+                statusMessage: 'Validation error',
+                data: error.messages,
+            });
+        }
+        throw error;
+    }
+}));
+
+// Request Password Reset
+authRouter.post('/password-reset/request', defineEventHandler(async (event) => {
+    try {
+        const body = await readBody(event);
+        await vine.validate({ schema: requestResetSchema, data: body });
+
+        const resetToken = await AuthService.requestPasswordReset(body.email);
+
+
+        if (process.env.NODE_ENV === 'development') {
+            return {
+                success: true,
+                message: 'If your email is registered, you will receive a password reset link.',
+                devToken: resetToken, // Only in development
+            };
+        }
+
+        return {
+            success: true,
+            message: 'If your email is registered, you will receive a password reset link.',
+        };
+    } catch (error) {
+        if (error instanceof errors.E_VALIDATION_ERROR) {
+            throw createError({
+                statusCode: 400,
+                statusMessage: 'Validation error',
+                data: error.messages,
+            });
+        }
+
+        // Always return the same message regardless of whether the email exists
+        // to prevent email enumeration attacks
+        return {
+            success: true,
+            message: 'If your email is registered, you will receive a password reset link.',
+        };
+    }
+}));
+
+// Reset Password
+authRouter.post('/password-reset/reset', defineEventHandler(async (event) => {
+    try {
+        const body = await readBody(event);
+        await vine.validate({ schema: resetPasswordSchema, data: body });
+
+        await AuthService.resetPassword(body.token, body.password);
+
+        return {
+            success: true,
+            message: 'Password reset successful. You can now log in with your new password.',
+        };
+    } catch (error) {
+        if (error instanceof errors.E_VALIDATION_ERROR) {
+            throw createError({
+                statusCode: 400,
+                statusMessage: 'Validation error',
+                data: error.messages,
+            });
+        }
+        throw error;
+    }
+}));
+
+// Verify Email
+authRouter.get('/email/verify/:token', defineEventHandler(async (event) => {
+    try {
+        const token = event.context.params?.token;
+        
+        if (!token) {
+            throw createError({
+                statusCode: 400,
+                statusMessage: 'Invalid verification token',
+            });
+        }
+
+        await AuthService.verifyEmail(token);
+
+        // Redirect to frontend with success message
+        return sendRedirect(event, `https://${FRONTEND_DOMAIN}/auth/email-verified`);
+    } catch (error) {
+        // Redirect to frontend with error
+        return sendRedirect(event, `https://${FRONTEND_DOMAIN}/auth/verification-error`);
+    }
+}));
+
+// Initiate GitHub OAuth 
+authRouter.get('/github', defineEventHandler(async (event) => {
     const query = getQuery(event);
     const callbackUrl = query.callbackUrl || `https://${FRONTEND_DOMAIN}/auth/callback`;
 
@@ -71,7 +210,7 @@ authRouter.get('/login', defineEventHandler(async (event) => {
     return sendRedirect(event, authUrl);
 }));
 
-// GitHub OAuth callback
+// GitHub OAuth callback (existing code)
 authRouter.get('/callback', defineEventHandler(async (event) => {
     const query = getQuery(event);
     const code = query.code as string;
@@ -142,7 +281,23 @@ authRouter.get('/callback', defineEventHandler(async (event) => {
         // Find or create user
         let user = await User.findOne({ githubId: userData.id });
 
+        // Check if email exists but not linked to this GitHub account
         if (!user) {
+            const existingUserWithEmail = await User.findOne({ email: primaryEmail });
+            
+            if (existingUserWithEmail) {
+                // Link GitHub account to existing email account
+                existingUserWithEmail.githubId = userData.id;
+                existingUserWithEmail.avatar = existingUserWithEmail.avatar || userData.avatar_url;
+                existingUserWithEmail.accessToken = access_token;
+                if (refresh_token) existingUserWithEmail.refreshToken = refresh_token;
+                await existingUserWithEmail.save();
+                user = existingUserWithEmail;
+            }
+        }
+
+        if (!user) {
+            // Create new user with GitHub credentials
             user = new User({
                 githubId: userData.id,
                 email: primaryEmail,
@@ -150,8 +305,10 @@ authRouter.get('/callback', defineEventHandler(async (event) => {
                 avatar: userData.avatar_url,
                 accessToken: access_token,
                 refreshToken: refresh_token,
+                isEmailVerified: true, 
             });
         } else {
+            // Update existing user
             user.accessToken = access_token;
             if (refresh_token) user.refreshToken = refresh_token;
             user.name = userData.name || userData.login;
@@ -161,7 +318,7 @@ authRouter.get('/callback', defineEventHandler(async (event) => {
         await user.save();
 
         // Create a new session
-        const sessionId = await createSession(user._id);
+        const sessionId = await AuthService.createSession(user._id);
 
         // Set session cookie
         setCookie(event, SESSION_COOKIE_NAME, sessionId, getCookieOptions());
@@ -186,7 +343,7 @@ authRouter.get('/me', defineEventHandler(async (event) => {
         return { authenticated: false };
     }
 
-    const userId = await validateSession(sessionId);
+    const userId = await AuthService.validateSession(sessionId);
 
     if (!userId) {
         deleteCookie(event, SESSION_COOKIE_NAME, getCookieOptions());
@@ -208,6 +365,7 @@ authRouter.get('/me', defineEventHandler(async (event) => {
                 name: user.name,
                 email: user.email,
                 avatar: user.avatar,
+                isEmailVerified: user.isEmailVerified,
             },
         };
     } catch (error) {
@@ -217,12 +375,12 @@ authRouter.get('/me', defineEventHandler(async (event) => {
     }
 }));
 
-// Logout
+// Logout 
 authRouter.post('/logout', defineEventHandler(async (event) => {
     const sessionId = getCookie(event, SESSION_COOKIE_NAME);
 
     if (sessionId) {
-        await deleteSession(sessionId);
+        await AuthService.deleteSession(sessionId);
     }
 
     deleteCookie(event, SESSION_COOKIE_NAME, getCookieOptions());
@@ -230,7 +388,7 @@ authRouter.post('/logout', defineEventHandler(async (event) => {
     return { success: true };
 }));
 
-// Logout from all devices
+// Logout from all devices 
 authRouter.post('/logout-all', defineEventHandler(async (event) => {
     const sessionId = getCookie(event, SESSION_COOKIE_NAME);
 
@@ -238,7 +396,7 @@ authRouter.post('/logout-all', defineEventHandler(async (event) => {
         return { success: false, message: 'Not authenticated' };
     }
 
-    const userId = await validateSession(sessionId);
+    const userId = await AuthService.validateSession(sessionId);
 
     if (!userId) {
         deleteCookie(event, SESSION_COOKIE_NAME, getCookieOptions());
@@ -247,7 +405,7 @@ authRouter.post('/logout-all', defineEventHandler(async (event) => {
 
     try {
         // Delete all sessions for this user
-        await Session.deleteMany({ userId });
+        await AuthService.deleteAllSessions(userId);
 
         // Delete the cookie
         deleteCookie(event, SESSION_COOKIE_NAME, getCookieOptions());
