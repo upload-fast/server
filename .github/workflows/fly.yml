@@ -28,7 +28,7 @@ jobs:
 
       - name: Deploy to Fly.io
         run: |
-           flyctl secrets set --stage ACCOUNT_ID=${{ secrets.ACCOUNT_ID }} ACCESS_KEY_ID=${{ secrets.ACCESS_KEY_ID }} SECRET_ACCESS_KEY=${{ secrets.SECRET_ACCESS_KEY }} MONGO_URI=${{ secrets.MONGO_URI }} WEBHOOK_SECRET=${{ secrets.WEBHOOK_SECRET }} EMAIL_HOST=${{ secrets.EMAIL_HOST }} EMAIL_PORT=${{ secrets.EMAIL_PORT }} EMAIL_USER=${{ secrets.EMAIL_USER }} EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} EMAIL_FROM=${{ secrets.EMAIL_FROM }} EMAIL_SECURE=${{ secrets.EMAIL_SECURE }} FRONTEND_DOMAIN=${{ secrets.FRONTEND_DOMAIN }} BACKEND_URL=${{ secrets.BACKEND_URL }}
+          flyctl secrets set --stage ACCOUNT_ID=${{ secrets.ACCOUNT_ID }} ACCESS_KEY_ID=${{ secrets.ACCESS_KEY_ID }} SECRET_ACCESS_KEY=${{ secrets.SECRET_ACCESS_KEY }} MONGO_URI=${{ secrets.MONGO_URI }} WEBHOOK_SECRET=${{ secrets.WEBHOOK_SECRET }} EMAIL_HOST=${{ secrets.EMAIL_HOST }} EMAIL_PORT=${{ secrets.EMAIL_PORT }} EMAIL_USER=${{ secrets.EMAIL_USER }} EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} EMAIL_FROM=${{ secrets.EMAIL_FROM }} EMAIL_SECURE=${{ secrets.EMAIL_SECURE }} FRONTEND_DOMAIN=${{ secrets.FRONTEND_DOMAIN }} BACKEND_URL=${{ secrets.BACKEND_URL }}
           pnpm build
           flyctl deploy --remote-only
         env:
