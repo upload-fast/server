@@ -27,22 +27,6 @@ WORKDIR /app
 # Copy package.json and pnpm-lock.yaml files
 COPY --link package.json pnpm-lock.yaml ./
 
-# Set environment variables from .env
-ENV ACCOUNT_ID=""
-ENV MONGO_URI=""
-ENV SECRET_ACCESS_KEY=""
-ENV ACCESS_KEY_ID=""
-ENV WEBHOOK_SECRET=""
-
-ENV EMAIL_HOST=""
-ENV EMAIL_PORT=""
-ENV EMAIL_USER=""
-ENV EMAIL_PASSWORD=""
-ENV EMAIL_FROM=""
-ENV EMAIL_SECURE=""
-ENV FRONTEND_DOMAIN=""
-ENV BACKEND_URL=""
-
 # Install dependencies
 RUN pnpm install --force --prod=false
 
