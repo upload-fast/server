@@ -28,19 +28,19 @@ jobs:
 
       - name: Set Fly.io Secrets
         run: |
-          flyctl secrets set ACCOUNT_ID="${{ secrets.ACCOUNT_ID }}"
-          flyctl secrets set ACCESS_KEY_ID="${{ secrets.ACCESS_KEY_ID }}"
-          flyctl secrets set SECRET_ACCESS_KEY="${{ secrets.SECRET_ACCESS_KEY }}"
-          flyctl secrets set MONGO_URI="${{ secrets.MONGO_URI }}"
-          flyctl secrets set WEBHOOK_SECRET="${{ secrets.WEBHOOK_SECRET }}"
-          flyctl secrets set EMAIL_HOST="${{ secrets.EMAIL_HOST }}"
-          flyctl secrets set EMAIL_PORT="${{ secrets.EMAIL_PORT }}"
-          flyctl secrets set EMAIL_USER="${{ secrets.EMAIL_USER }}"
-          flyctl secrets set EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}"
-          flyctl secrets set EMAIL_FROM="${{ secrets.EMAIL_FROM }}"
-          flyctl secrets set EMAIL_SECURE="${{ secrets.EMAIL_SECURE }}"
-          flyctl secrets set FRONTEND_DOMAIN="${{ secrets.FRONTEND_DOMAIN }}"
-          flyctl secrets set BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          flyctl secrets set --stage ACCOUNT_ID="${{ secrets.ACCOUNT_ID }}"
+          flyctl secrets set --stage ACCESS_KEY_ID="${{ secrets.ACCESS_KEY_ID }}"
+          flyctl secrets set --stage SECRET_ACCESS_KEY="${{ secrets.SECRET_ACCESS_KEY }}"
+          flyctl secrets set --stage MONGO_URI="${{ secrets.MONGO_URI }}"
+          flyctl secrets set --stage WEBHOOK_SECRET="${{ secrets.WEBHOOK_SECRET }}"
+          flyctl secrets set --stage EMAIL_HOST="${{ secrets.EMAIL_HOST }}"
+          flyctl secrets set --stage EMAIL_PORT="${{ secrets.EMAIL_PORT }}"
+          flyctl secrets set --stage EMAIL_USER="${{ secrets.EMAIL_USER }}"
+          flyctl secrets set --stage EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}"
+          flyctl secrets set --stage EMAIL_FROM="${{ secrets.EMAIL_FROM }}"
+          flyctl secrets set --stage EMAIL_SECURE="${{ secrets.EMAIL_SECURE }}"
+          flyctl secrets set --stage FRONTEND_DOMAIN="${{ secrets.FRONTEND_DOMAIN }}"
+          flyctl secrets set --stage BACKEND_URL="${{ secrets.BACKEND_URL }}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
