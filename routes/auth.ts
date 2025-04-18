@@ -1,10 +1,7 @@
-import { createRouter, defineEventHandler, getQuery, setCookie, getCookie, deleteCookie, sendRedirect, createError, setResponseStatus, readBody } from 'h3';
-import { User } from '../models/user.js';
-import { Session } from '../models/session.js';
-import mongoose from 'mongoose';
-import { generateRandomString } from '../lib/custom-uuid.js';
-import { AuthService } from '../services/auth-service.js';
 import vine, { errors } from "@vinejs/vine";
+import { createError, createRouter, defineEventHandler, deleteCookie, getCookie, getQuery, readBody, sendRedirect, setCookie, setResponseStatus } from 'h3';
+import { User } from '../models/user.js';
+import { AuthService } from '../services/auth-service.js';
 
 const authRouter = createRouter();
 
