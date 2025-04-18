@@ -7,41 +7,47 @@ jobs:
   deploy:
     name: Deploy app
     runs-on: ubuntu-latest
-    concurrency: deploy-group # optional: ensure only one action runs at a time
+    concurrency: deploy-group
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20' # Adjust this to your project's Node.js version
+          node-version: '20'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8 # Adjust this to your preferred pnpm version
+          version: 8
 
       - name: Install dependencies
         run: pnpm install
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
-      - name: Deploy to Fly.io
+      - name: Set Fly.io Secrets
         run: |
-          flyctl secrets set ACCOUNT_ID=${{ secrets.ACCOUNT_ID }} \
-            ACCESS_KEY_ID=${{ secrets.ACCESS_KEY_ID }} \
-            SECRET_ACCESS_KEY=${{ secrets.SECRET_ACCESS_KEY }} \
-            MONGO_URI=${{ secrets.MONGO_URI }} \
-            WEBHOOK_SECRET=${{ secrets.WEBHOOK_SECRET }} \
-            EMAIL_HOST=${{ secrets.EMAIL_HOST }} \
-            EMAIL_PORT=${{ secrets.EMAIL_PORT }} \
-            EMAIL_USER=${{ secrets.EMAIL_USER }} \
-            EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} \
-            EMAIL_FROM=${{ secrets.EMAIL_FROM }} \
-            EMAIL_SECURE=${{ secrets.EMAIL_SECURE }} \
-            FRONTEND_DOMAIN=${{ secrets.FRONTEND_DOMAIN }} \
-            BACKEND_URL=${{ secrets.BACKEND_URL }}
-          pnpm build
-          flyctl deploy --remote-only
+          flyctl secrets set ACCOUNT_ID="${{ secrets.ACCOUNT_ID }}"
+          flyctl secrets set ACCESS_KEY_ID="${{ secrets.ACCESS_KEY_ID }}"
+          flyctl secrets set SECRET_ACCESS_KEY="${{ secrets.SECRET_ACCESS_KEY }}"
+          flyctl secrets set MONGO_URI="${{ secrets.MONGO_URI }}"
+          flyctl secrets set WEBHOOK_SECRET="${{ secrets.WEBHOOK_SECRET }}"
+          flyctl secrets set EMAIL_HOST="${{ secrets.EMAIL_HOST }}"
+          flyctl secrets set EMAIL_PORT="${{ secrets.EMAIL_PORT }}"
+          flyctl secrets set EMAIL_USER="${{ secrets.EMAIL_USER }}"
+          flyctl secrets set EMAIL_PASSWORD="${{ secrets.EMAIL_PASSWORD }}"
+          flyctl secrets set EMAIL_FROM="${{ secrets.EMAIL_FROM }}"
+          flyctl secrets set EMAIL_SECURE="${{ secrets.EMAIL_SECURE }}"
+          flyctl secrets set FRONTEND_DOMAIN="${{ secrets.FRONTEND_DOMAIN }}"
+          flyctl secrets set BACKEND_URL="${{ secrets.BACKEND_URL }}"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Build Application
+        run: pnpm build
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
