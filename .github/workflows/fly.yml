@@ -11,7 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     concurrency: deploy-group # optional: ensure only one action runs at a time
     steps:
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+        
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -25,8 +27,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
         
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Setup Fly.io
         uses: superfly/flyctl-actions/setup-flyctl@master
